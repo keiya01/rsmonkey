@@ -1,3 +1,5 @@
+use kmonkey::lepl;
+
 fn main() {
-    println!("Hello, world!");
+    lepl::start();
 }

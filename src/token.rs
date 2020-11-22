@@ -1,12 +1,12 @@
 use std::cmp::PartialEq;
 
 #[derive(Debug, PartialEq)]
-pub enum Token<'a> {
+pub enum Token {
   ILLEGAL,
   EOF,
   
   // 識別子 + リテラル
-  IDENT(&'a str),
+  IDENT(String),
   INT(i64),
   
   // 演算子

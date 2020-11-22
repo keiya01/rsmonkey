@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use crate::{lexer, token};
 
 fn log_token(buf: String) {
-  let mut l = lexer::Lexer::new(&buf);
+  let mut l = lexer::Lexer::new(buf);
   loop {
     let t = l.next_token();
     if let token::Token::EOF = t {

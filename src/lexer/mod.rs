@@ -1,15 +1,15 @@
 use crate::token;
 
 #[derive(Debug)]
-pub struct Lexer<'a> {
-  input: &'a str,
+pub struct Lexer {
+  input: String,
   position: usize,
   read_position: usize,
   ch: u8,
 }
 
-impl<'a> Lexer<'a> {
-  pub fn new(input: &'a str) -> Lexer<'a> {
+impl Lexer {
+  pub fn new(input: String) -> Lexer {
     let mut l = Lexer {
       input,
       position: 0,
@@ -101,7 +101,7 @@ impl<'a> Lexer<'a> {
       "if" => token::Token::IF,
       "else" => token::Token::ELSE,
       "return" => token::Token::RETURN,
-      _ => token::Token::IDENT(ident),
+      _ => token::Token::IDENT(ident.to_string()),
     }
   }
 
@@ -146,39 +146,39 @@ if (5 < 10) {
 
       let tests: Vec<token::Token> = vec![
         token::Token::LET,
-        token::Token::IDENT("five"),
+        token::Token::IDENT("five".to_string()),
         token::Token::ASSIGN,
         token::Token::INT(5),
         token::Token::SEMICOLON,
         token::Token::LET,
-        token::Token::IDENT("ten"),
+        token::Token::IDENT("ten".to_string()),
         token::Token::ASSIGN,
         token::Token::INT(10),
         token::Token::SEMICOLON,
         token::Token::LET,
-        token::Token::IDENT("add"),
+        token::Token::IDENT("add".to_string()),
         token::Token::ASSIGN,
         token::Token::FUNCTION,
         token::Token::LPAREN,
-        token::Token::IDENT("x"),
+        token::Token::IDENT("x".to_string()),
         token::Token::COMMA,
-        token::Token::IDENT("y"),
+        token::Token::IDENT("y".to_string()),
         token::Token::RPAREN,
         token::Token::LBRACE,
-        token::Token::IDENT("x"),
+        token::Token::IDENT("x".to_string()),
         token::Token::PLUS,
-        token::Token::IDENT("y"),
+        token::Token::IDENT("y".to_string()),
         token::Token::SEMICOLON,
         token::Token::RBRACE,
         token::Token::SEMICOLON,
         token::Token::LET,
-        token::Token::IDENT("result"),
+        token::Token::IDENT("result".to_string()),
         token::Token::ASSIGN,
-        token::Token::IDENT("add"),
+        token::Token::IDENT("add".to_string()),
         token::Token::LPAREN,
-        token::Token::IDENT("five"),
+        token::Token::IDENT("five".to_string()),
         token::Token::COMMA,
-        token::Token::IDENT("ten"),
+        token::Token::IDENT("ten".to_string()),
         token::Token::RPAREN,
         token::Token::SEMICOLON,
         token::Token::BANG,
@@ -221,7 +221,7 @@ if (5 < 10) {
         token::Token::EOF,
       ];
 
-      let mut l = Lexer::new(&input);
+      let mut l = Lexer::new(input.to_string());
 
       for tt in tests {
         let tok = l.next_token();

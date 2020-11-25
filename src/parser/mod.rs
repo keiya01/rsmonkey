@@ -4,6 +4,7 @@ use crate::{token, lexer};
 use crate::ast::{Program};
 
 pub mod stmt;
+pub mod expr;
 
 impl token::Token {
   pub(super) fn is(&self, token: token::Token) -> bool {

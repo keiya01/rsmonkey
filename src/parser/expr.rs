@@ -1,6 +1,5 @@
 use super::{Parser};
 use crate::{token};
-use crate::ast::stmt::*;
 use crate::ast::expr::*;
 use crate::ast::lit::*;
 use crate::ast::ident::{Identifier};

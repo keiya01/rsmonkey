@@ -1,16 +1,12 @@
 use std::io::{self, Write};
 
-use crate::{lexer, token};
+use crate::{lexer, parser};
 
 fn log_token(buf: String) {
-  let mut l = lexer::Lexer::new(buf);
-  loop {
-    let t = l.next_token();
-    if let token::Token::EOF = t {
-      break;
-    }
-    println!("{:?}", t);
-  }
+  let l = lexer::Lexer::new(buf);
+  let mut p = parser::Parser::new(l);
+  let program = p.parse_program();
+  println!("{}", program);
 }
 
 pub fn start() {

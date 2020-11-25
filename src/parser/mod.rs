@@ -360,19 +360,23 @@ false;
         _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
       };
 
-      let inf = match &expr.value {
-        Expression::Infix(inf) => inf,
-        _ => panic!("Expression should has InfixExpression, got {:?}", &expr.value),
-      };
-      
-      test_literal_expression(&inf.left, tt.left);
-      
-      if &inf.operator != &tt.operator {
-        panic!("Infix should has '{:?}', but got '{:?}'", &tt.operator, &inf.operator);
-      }
-
-      test_literal_expression(&inf.right, tt.right);
+      test_infix_expression(&expr.value, tt.left, tt.operator, tt.right);
     }
+  }
+
+  fn test_infix_expression(expr: &Expression, left: ExpressionLiteral, operator: Infix, right: ExpressionLiteral) {
+    let inf = match expr {
+      Expression::Infix(inf) => inf,
+      _ => panic!("Expression should has InfixExpression, got {:?}", expr),
+    };
+    
+    test_literal_expression(&inf.left, left);
+    
+    if &inf.operator != &operator {
+      panic!("Infix should has '{:?}', but got '{:?}'", &operator, &inf.operator);
+    }
+
+    test_literal_expression(&inf.right, right);
   }
 
   #[test]
@@ -480,6 +484,120 @@ false;
         panic!("expected={}, actual={}", tt.expected, actual);
       }
     }
+  }
+
+  #[test]
+  fn test_parse_if_expression() {
+    let input = "if (x < y) { x };";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    check_parse_errors(&p);
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let if_expr = match &expr.value {
+      Expression::If(if_expr) => if_expr,
+      _ => panic!("Expression should has IfExpression, but got {:?}", expr.value)
+    };
+
+    test_infix_expression(
+      &if_expr.condition,
+      ExpressionLiteral::Str("x".to_string()),
+      Infix::Lt,
+      ExpressionLiteral::Str("y".to_string()),
+    );
+
+    if if_expr.consequence.statements.len() != 1 {
+      panic!(
+        "if_expr.consequence.statements should has only 1 statement, but got {}",
+        if_expr.consequence.statements.len(),
+      );
+    }
+
+    let con_expr = match &if_expr.consequence.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!(
+        "if_expr.consequence.statements[0] should has ExpressionStatement, but got {:?}",
+        if_expr.consequence.statements[0],
+      ),
+    };
+
+    test_identifier(&con_expr.value, "x");
+
+    if let Some(_) = if_expr.alternative {
+      panic!("if_expr.alternative should be None, but {:?}", if_expr.alternative);
+    }
+  }
+
+  #[test]
+  fn test_parse_else_expression() {
+    let input = "if (x < y) { x } else { y };";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    check_parse_errors(&p);
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let if_expr = match &expr.value {
+      Expression::If(if_expr) => if_expr,
+      _ => panic!("Expression should has IfExpression, but got {:?}", expr.value)
+    };
+
+    test_infix_expression(
+      &if_expr.condition,
+      ExpressionLiteral::Str("x".to_string()),
+      Infix::Lt,
+      ExpressionLiteral::Str("y".to_string()),
+    );
+
+    if if_expr.consequence.statements.len() != 1 {
+      panic!(
+        "if_expr.consequence.statements should has only 1 statement, but got {}",
+        if_expr.consequence.statements.len(),
+      );
+    }
+
+    let con_expr = match &if_expr.consequence.statements[0] {
+      Statement::Expr(con_expr) => con_expr,
+      _ => panic!(
+        "if_expr.consequence.statements[0] should has ExpressionStatement, but got {:?}",
+        if_expr.consequence.statements[0],
+      ),
+    };
+
+    test_identifier(&con_expr.value, "x");
+
+    let else_expr = match &if_expr.alternative {
+      Some(else_expr) => else_expr,
+      None => panic!("if_expr.alternative should has alternative, but got {:?}", if_expr.alternative),
+    };
+
+    let alt_expr = match &else_expr.statements[0] {
+      Statement::Expr(alt_expr) => alt_expr,
+      _ => panic!("if_expr.alternative should has alternative, but got {:?}", if_expr.alternative),
+    };
+
+    test_identifier(&alt_expr.value, "y");
   }
 
   enum ExpressionLiteral {

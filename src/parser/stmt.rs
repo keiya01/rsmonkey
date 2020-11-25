@@ -1,7 +1,7 @@
 use super::{Parser};
 use crate::{token};
-use crate::ast::stmt::{Statement, LetStatement, ReturnStatement, ExpressionStatement};
-use crate::ast::expr::{Expression, PrefixExpression, InfixExpression};
+use crate::ast::stmt::*;
+use crate::ast::expr::*;
 use crate::ast::lit::*;
 use crate::ast::ident::{Identifier};
 use crate::ast::operator::{Prefix, Infix, BinaryOperator};
@@ -92,6 +92,21 @@ impl Parser {
     }
   }
 
+  fn parse_block_statement(&mut self) -> BlockStatement {
+    self.next_token();
+
+    let mut statements = vec![];
+
+    while !self.current_token.is(token::Token::RBRACE) && !self.current_token.is(token::Token::EOF) {
+      if let Some(stmt) = self.parse_statement() {
+        statements.push(stmt);
+      }
+      self.next_token();
+    }
+
+    BlockStatement::new(statements)
+  }
+
   fn parse_expression(&mut self, op: BinaryOperator) -> Option<Expression> {
     let mut left = match self.parse_prefix() {
       Some(expr) => expr,
@@ -113,9 +128,10 @@ impl Parser {
     match &self.current_token {
       token::Token::IDENT(s) => self.parse_identifier(s.to_string()),
       token::Token::INT(int) => self.parse_integer_literal(*int),
-      token::Token::TRUE | token::Token::FALSE => self.parse_bool(),
+      token::Token::TRUE | token::Token::FALSE => self.parse_boolean_literal(),
       token::Token::BANG | token::Token::MINUS => self.parse_prefix_expression(),
       token::Token::LPAREN => self.parse_grouped_expression(),
+      token::Token::IF => self.parse_if_expression(),
       _ => {
         self.no_prefix_parse_error();
         return None;
@@ -163,7 +179,7 @@ impl Parser {
     )
   }
 
-  fn parse_bool(&self) -> Option<Expression> {
+  fn parse_boolean_literal(&self) -> Option<Expression> {
     Some(
       Expression::Literal(
         Literal::Boolean(
@@ -203,6 +219,47 @@ impl Parser {
     }
 
     left
+  }
+
+  fn parse_if_expression(&mut self) -> Option<Expression> {
+    if !self.expect_peek(token::Token::LPAREN) {
+      return None;
+    }
+
+    self.next_token();
+
+    let condition = match self.parse_expression(BinaryOperator::Lowest) {
+      Some(expr) => expr,
+      None => return None,
+    };
+
+    if !self.expect_peek(token::Token::RPAREN) {
+      return None;
+    }
+
+    if !self.expect_peek(token::Token::LBRACE) {
+      return None;
+    }
+
+    let consequence = self.parse_block_statement();
+
+    // Because ELSE token don't want to be error,
+    // self.expect_peek() is not used
+    let alternative = if self.peek_token.is(token::Token::ELSE) {
+      self.next_token();
+      if !self.expect_peek(token::Token::LBRACE) {
+        return None;
+      }
+      Some(self.parse_block_statement())
+    } else {
+      None
+    };
+
+    Some(
+      Expression::If(
+        IfExpression::new(Box::new(condition), consequence, alternative),
+      ),
+    )
   }
 
   fn expect_ident_peek(&mut self) -> bool {

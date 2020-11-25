@@ -14,10 +14,10 @@ pub enum Statement {
 impl fmt::Display for Statement {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Statement::Let(let_stmt) => write!(f, "{}", format!("{}", let_stmt)),
-      Statement::Return(return_stmt) => write!(f, "{}", format!("{}", return_stmt)),
-      Statement::Expr(expr_stmt) => write!(f, "{}", format!("{}", expr_stmt)),
-      Statement::Block(block) => write!(f, "{}", format!("{}", block)),
+      Statement::Let(let_stmt) => write!(f, "{}", let_stmt),
+      Statement::Return(return_stmt) => write!(f, "{}", return_stmt),
+      Statement::Expr(expr_stmt) => write!(f, "{}", expr_stmt),
+      Statement::Block(block) => write!(f, "{}", block),
     }
   }
 }
@@ -36,12 +36,11 @@ impl LetStatement {
 
 impl fmt::Display for LetStatement {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "let ").unwrap();
-    write!(f, "{}", format!("{}", self.ident)).unwrap();
-    write!(f, " = ").unwrap();
-    write!(f, "{}", format!("{}", self.value)).unwrap();
-    write!(f, ";").unwrap();
-    Ok(())
+    write!(f, "let ")?;
+    write!(f, "{}", self.ident)?;
+    write!(f, " = ")?;
+    write!(f, "{}", self.value)?;
+    write!(f, ";")
   }
 }
 
@@ -58,10 +57,9 @@ impl ReturnStatement {
 
 impl fmt::Display for ReturnStatement {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "return ").unwrap();
-    write!(f, "{}", format!("{}", self.value)).unwrap();
-    write!(f, ";").unwrap();
-    Ok(())
+    write!(f, "return ")?;
+    write!(f, "{}", self.value)?;
+    write!(f, ";")
   }
 }
 
@@ -78,7 +76,7 @@ impl ExpressionStatement {
 
 impl fmt::Display for ExpressionStatement {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", format!("{}", self.value)).unwrap();
+    write!(f, "{}", self.value)
   }
 }
 
@@ -96,7 +94,7 @@ impl BlockStatement {
 impl fmt::Display for BlockStatement {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for stmt in &self.statements {
-      write!(f, "{}", stmt).unwrap()
+      write!(f, "{}", stmt)?;
     }
     Ok(())
   }

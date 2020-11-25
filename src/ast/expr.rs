@@ -16,11 +16,11 @@ pub enum Expression {
 impl fmt::Display for Expression {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Expression::Identifier(ident) => write!(f, "{}", format!("{}", ident)),
-      Expression::Literal(lit) => write!(f, "{}", format!("{}", lit)),
-      Expression::Prefix(pre) => write!(f, "{}", format!("{}", pre)),
-      Expression::Infix(inf) => write!(f, "{}", format!("{}", inf)),
-      Expression::If(if_expr) => write!(f, "{}", format!("{}", if_expr)),
+      Expression::Identifier(ident) => write!(f, "{}", ident),
+      Expression::Literal(lit) => write!(f, "{}", lit),
+      Expression::Prefix(pre) => write!(f, "{}", pre),
+      Expression::Infix(inf) => write!(f, "{}", inf),
+      Expression::If(if_expr) => write!(f, "{}", if_expr),
     }
   }
 }
@@ -77,9 +77,9 @@ impl IfExpression {
 
 impl fmt::Display for IfExpression {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "if ({}) {}", self.condition, self.consequence).unwrap();
+    write!(f, "if ({}) {}", self.condition, self.consequence)?;
     if let Some(alt) = &self.alternative {
-      write!(f, " else {}", alt).unwrap();
+      write!(f, " else {}", alt)?;
     }
     Ok(())
   }

@@ -1,7 +1,6 @@
 use super::{Parser};
 use crate::{token};
 use crate::ast::stmt::*;
-use crate::ast::expr::*;
 use crate::ast::ident::{Identifier};
 use crate::ast::operator::{BinaryOperator};
 
@@ -31,17 +30,21 @@ impl Parser {
       return None;
     }
 
-    while !self.current_token.is(token::Token::SEMICOLON) {
+    self.next_token();
+
+    let value = match self.parse_expression(BinaryOperator::Lowest) {
+      Some(expr) => expr,
+      None => return None,
+    };
+
+    if self.peek_token.is(token::Token::SEMICOLON) {
       self.next_token();
     }
 
     let stmt = Statement::Let(
       LetStatement::new(
         ident,
-        Expression::Identifier(
-          // TODO: fix
-          Identifier::new("".to_string()),
-        ),
+        value,
       ),
     );
 
@@ -51,18 +54,16 @@ impl Parser {
   fn parse_return_statement(&mut self) -> Option<Statement> {
     self.next_token();
 
-    while !self.current_token.is(token::Token::SEMICOLON) {
+    let value = match self.parse_expression(BinaryOperator::Lowest) {
+      Some(expr) => expr,
+      None => return None,
+    };
+
+    if self.peek_token.is(token::Token::SEMICOLON) {
       self.next_token();
     }
 
-    let stmt = Statement::Return(
-      ReturnStatement::new(
-        Expression::Identifier(
-          // TODO: fix
-          Identifier::new("".to_string()),
-        ),
-      ),
-    );
+    let stmt = Statement::Return(ReturnStatement::new(value));
 
     Some(stmt)
   }
@@ -111,77 +112,75 @@ impl Parser {
 #[cfg(test)]
 mod tests {
   use crate::lexer;
+  use crate::parser::expr::*;
   use super::*;
 
   #[test]
   fn test_parse_let_statement() {
-    let input = "
-let x = 5;
-let y = 10;
-let foobar = 838383;
-";
-
-    let l = lexer::Lexer::new(input.to_string());
-    let mut p = Parser::new(l);
-
-    let program = p.parse_program();
-    if !p.check_parse_errors() {
-      panic!();
-    }
-
-    if program.statements.len() != 3 {
-      panic!("program.statements does not contain 3 statements. got={}", program.statements.len());
-    }
-
     let tests = vec![
-      Identifier::new("x".to_string()),
-      Identifier::new("y".to_string()),
-      Identifier::new("foobar".to_string()),
+      ("let x = 5;", "x", ExpressionLiteral::Int(5)),
+      ("let y = true;", "y", ExpressionLiteral::Bool(true)),
+      ("let foobar = y;", "foobar", ExpressionLiteral::Str("y".to_string())),
     ];
 
-    
-    for (i, tt) in tests.into_iter().enumerate() {
-      let stmt = &program.statements[i];
-      comp_let_statement(stmt, tt);
-    }
-  }
+    for (input, expected_ident, expected_expr) in tests.into_iter() {
+      let l = lexer::Lexer::new(input.to_string());
+      let mut p = Parser::new(l);
+  
+      let program = p.parse_program();
+      if !p.check_parse_errors() {
+        panic!();
+      }
+  
+      if program.statements.len() != 1 {
+        panic!("program.statements does not contain 1 statements. got={}", program.statements.len());
+      }  
+      
+      let stmt = &program.statements[0];
+      let let_stmt = match stmt {
+        Statement::Let(let_stmt) => let_stmt,
+        _ => panic!("stmt.token_literal() not 'let'. get={:?}", stmt),
+      };
+  
+      assert_eq!(
+        &let_stmt.ident.value,
+        expected_ident,
+        "expect={}, actual={}",
+        expected_ident,
+        &let_stmt.ident.value,
+      );
 
-  fn comp_let_statement(stmt: &Statement, tt: Identifier) {
-    match stmt {
-      Statement::Let(_) => (),
-      _ => panic!("stmt.token_literal() not 'let'. get={:?}", stmt),
-    };
-
-    if let Statement::Let(let_stmt) = stmt {
-      assert_eq!(&let_stmt.ident.value, &tt.value, "expect={}, actual={}", &tt.value, &let_stmt.ident.value);
+      test_literal_expression(&let_stmt.value, expected_expr);
     }
   }
   
   #[test]
   fn test_parse_return_statement() {
-    let input = "
-return 5;
-return 10;
-return 993322;
-";
+    let tests = vec![
+      ("return 5;", ExpressionLiteral::Int(5)),
+      ("return true;", ExpressionLiteral::Bool(true)),
+      ("return y;", ExpressionLiteral::Str("y".to_string())),
+    ];
 
-    let l = lexer::Lexer::new(input.to_string());
-    let mut p = Parser::new(l);
+    for (input, expected_expr) in tests.into_iter() {
+      let l = lexer::Lexer::new(input.to_string());
+      let mut p = Parser::new(l);
 
-    let program = p.parse_program();
-    if !p.check_parse_errors() {
-      panic!();
-    }
-
-    if program.statements.len() != 3 {
-      panic!("program.statements does not contain 3 statements. got={}", program.statements.len());
-    }
-    
-    for stmt in &program.statements {
-      match stmt {
-        Statement::Return(_) => (),
-        _ => panic!("ReturnStatement is not included, got {:?}", stmt),
+      let program = p.parse_program();
+      if !p.check_parse_errors() {
+        panic!();
       }
+
+      if program.statements.len() != 1 {
+        panic!("program.statements does not contain 1 statements. got={}", program.statements.len());
+      }
+      
+      let return_stmt = match &program.statements[0] {
+        Statement::Return(return_stmt) => return_stmt,
+        _ => panic!("ReturnStatement is not included, got {:?}", &program.statements[0]),
+      };
+
+      test_literal_expression(&return_stmt.value, expected_expr);
     }
   }
 }

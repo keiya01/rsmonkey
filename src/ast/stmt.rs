@@ -46,7 +46,7 @@ impl fmt::Display for LetStatement {
 
 #[derive(Debug)]
 pub struct ReturnStatement {
-  value: Expression,
+  pub value: Expression,
 }
 
 impl ReturnStatement {

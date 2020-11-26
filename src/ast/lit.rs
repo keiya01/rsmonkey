@@ -68,9 +68,17 @@ impl Func {
 impl fmt::Display for Func {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "fn(")?;
-    for arg in &self.args {
-      write!(f, "{}, ", &arg.value)?;
+
+    let mut iter = self.args.iter();    
+    let mut next = iter.next();
+    while let Some(val) = next {
+      next = iter.next();
+      write!(f, "{}", val)?;
+      if let Some(_) = next {
+        write!(f, ", ")?;
+      }
     }
+
     write!(f, ") {}", &self.body)?;
     Ok(())
   }

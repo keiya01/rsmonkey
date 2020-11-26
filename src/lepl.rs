@@ -7,7 +7,7 @@ fn log_token(buf: String) {
   let mut p = parser::Parser::new(l);
   let program = p.parse_program();
 
-  if p.check_parse_errors() {
+  if !p.check_parse_errors() {
     return;
   }
 

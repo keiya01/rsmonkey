@@ -125,7 +125,7 @@ let foobar = 838383;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -169,7 +169,7 @@ return 993322;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 

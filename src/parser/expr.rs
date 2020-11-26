@@ -317,6 +317,68 @@ impl Parser {
 }
 
 #[cfg(test)]
+pub enum ExpressionLiteral {
+  Int(i64),
+  Bool(bool),
+  Str(String),
+}
+
+#[cfg(test)]
+pub fn test_literal_expression(expr: &Expression, expect: ExpressionLiteral) {
+  match expect {
+    ExpressionLiteral::Int(v) => test_integer_literal(expr, &v),
+    ExpressionLiteral::Str(v) => test_identifier(expr, &v),
+    ExpressionLiteral::Bool(v) => test_boolean(expr, &v),
+  };
+}
+
+#[cfg(test)]
+pub fn test_identifier(expr: &Expression, value: &str) {
+  let ident = match &expr {
+    Expression::Identifier(ident) => ident,
+    _ => panic!("Expression should has Identifier, got {}", &expr)
+  };
+
+  if &ident.value != value {
+    panic!("Identifier should has foobar, but got {}", &ident.value);
+  }
+}
+
+#[cfg(test)]
+pub fn test_integer_literal(expr: &Expression, comp: &i64) {
+  let lit = match &expr {
+    Expression::Literal(lit) => lit,
+    _ => panic!("Expression should has Literal, got {}", &expr)
+  };
+  
+  let int = match &lit {
+    Literal::Integer(int) => int,
+    _ => panic!("Literal should has Integer, got {}", &lit)
+  };
+
+  if &int.value != comp {
+    panic!("Identifier should has {}, but got {}", int.value, comp);
+  }
+}
+
+#[cfg(test)]
+pub fn test_boolean(expr: &Expression, comp: &bool) {
+  let lit = match &expr {
+    Expression::Literal(lit) => lit,
+    _ => panic!("Expression should has Literal, got {}", &expr)
+  };
+  
+  let int = match &lit {
+    Literal::Boolean(v) => v,
+    _ => panic!("Literal should has Boolean, got {}", &lit)
+  };
+
+  if &int.value != comp {
+    panic!("Identifier should has {}, but got {}", int.value, comp);
+  }
+}
+
+#[cfg(test)]
 mod tests {
   use crate::ast::stmt::{Statement};
   use crate::lexer;
@@ -330,7 +392,7 @@ mod tests {
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -354,7 +416,7 @@ mod tests {
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -383,7 +445,7 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -436,7 +498,7 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if p.check_parse_errors() {
+      if !p.check_parse_errors() {
         panic!();
       }
   
@@ -544,7 +606,7 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if p.check_parse_errors() {
+      if !p.check_parse_errors() {
         panic!();
       }
   
@@ -674,7 +736,7 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if p.check_parse_errors() {
+      if !p.check_parse_errors() {
         panic!();
       }
   
@@ -693,7 +755,7 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -748,7 +810,7 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -811,7 +873,7 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -878,7 +940,7 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if p.check_parse_errors() {
+    if !p.check_parse_errors() {
       panic!();
     }
 
@@ -933,7 +995,7 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if p.check_parse_errors() {
+      if !p.check_parse_errors() {
         panic!();
       }
   
@@ -962,63 +1024,6 @@ false;
           arg,
         )
       }
-    }
-  }
-
-  enum ExpressionLiteral {
-    Int(i64),
-    Bool(bool),
-    Str(String),
-  }
-
-  fn test_literal_expression(expr: &Expression, expect: ExpressionLiteral) {
-    match expect {
-      ExpressionLiteral::Int(v) => test_integer_literal(expr, &v),
-      ExpressionLiteral::Str(v) => test_identifier(expr, &v),
-      ExpressionLiteral::Bool(v) => test_boolean(expr, &v),
-    };
-  }
-
-  fn test_identifier(expr: &Expression, value: &str) {
-    let ident = match &expr {
-      Expression::Identifier(ident) => ident,
-      _ => panic!("Expression should has Identifier, got {}", &expr)
-    };
-
-    if &ident.value != value {
-      panic!("Identifier should has foobar, but got {}", &ident.value);
-    }
-  }
-
-  fn test_integer_literal(expr: &Expression, comp: &i64) {
-    let lit = match &expr {
-      Expression::Literal(lit) => lit,
-      _ => panic!("Expression should has Literal, got {}", &expr)
-    };
-    
-    let int = match &lit {
-      Literal::Integer(int) => int,
-      _ => panic!("Literal should has Integer, got {}", &lit)
-    };
-
-    if &int.value != comp {
-      panic!("Identifier should has {}, but got {}", int.value, comp);
-    }
-  }
-
-  fn test_boolean(expr: &Expression, comp: &bool) {
-    let lit = match &expr {
-      Expression::Literal(lit) => lit,
-      _ => panic!("Expression should has Literal, got {}", &expr)
-    };
-    
-    let int = match &lit {
-      Literal::Boolean(v) => v,
-      _ => panic!("Literal should has Boolean, got {}", &lit)
-    };
-
-    if &int.value != comp {
-      panic!("Identifier should has {}, but got {}", int.value, comp);
     }
   }
 }

@@ -12,6 +12,7 @@ impl token::Token {
       token::Token::LT | token::Token::GT => BinaryOperator::LtGt,
       token::Token::PLUS | token::Token::MINUS => BinaryOperator::Sum,
       token::Token::ASTERISK | token::Token::SLASH => BinaryOperator::Product,
+      token::Token::LPAREN => BinaryOperator::Call,
       _ => BinaryOperator::Lowest,
     }
   }
@@ -52,29 +53,18 @@ impl Parser {
   }
 
   fn parse_infix(&mut self, left: Expression) -> Option<Expression> {
-    let operator = match self.current_token {
-      token::Token::PLUS => Infix::Plus,
-      token::Token::MINUS => Infix::Minus,
-      token::Token::SLASH => Infix::Slash,
-      token::Token::ASTERISK => Infix::Asterisk,
-      token::Token::GT => Infix::Gt,
-      token::Token::LT => Infix::Lt,
-      token::Token::EQ => Infix::Equal,
-      token::Token::NotEq => Infix::NotEq,
+    match &self.current_token {
+      token::Token::PLUS |
+      token::Token::MINUS |
+      token::Token::SLASH |
+      token::Token::ASTERISK |
+      token::Token::GT |
+      token::Token::LT |
+      token::Token::EQ |
+      token::Token::NotEq => self.parse_infix_expression(left),
+      token::Token::LPAREN => self.parse_call_expression(left),
       _ => return None,
-    };
-
-    let precedence = self.current_token.to_binary_operator();
-
-    self.next_token();
-
-    let right = match self.parse_expression(precedence) {
-      Some(expr) => expr,
-      None => return None,
-    };
-
-    let expr = Expression::Infix(InfixExpression::new(Box::new(left), operator, Box::new(right)));
-    Some(expr)
+    }
   }
 
   fn parse_identifier(&self, value: String) -> Option<Expression> {
@@ -119,6 +109,32 @@ impl Parser {
     };
 
     Some(Expression::Prefix(PrefixExpression::new(operator, Box::new(right))))
+  }
+
+  fn parse_infix_expression(&mut self, left: Expression) -> Option<Expression> {
+    let operator = match self.current_token {
+      token::Token::PLUS => Infix::Plus,
+      token::Token::MINUS => Infix::Minus,
+      token::Token::SLASH => Infix::Slash,
+      token::Token::ASTERISK => Infix::Asterisk,
+      token::Token::GT => Infix::Gt,
+      token::Token::LT => Infix::Lt,
+      token::Token::EQ => Infix::Equal,
+      token::Token::NotEq => Infix::NotEq,
+      _ => return None,
+    };
+
+    let precedence = self.current_token.to_binary_operator();
+
+    self.next_token();
+
+    let right = match self.parse_expression(precedence) {
+      Some(expr) => expr,
+      None => return None,
+    };
+
+    let expr = Expression::Infix(InfixExpression::new(Box::new(left), operator, Box::new(right)));
+    Some(expr)
   }
 
   fn parse_grouped_expression(&mut self) -> Option<Expression> {
@@ -243,6 +259,50 @@ impl Parser {
     };
 
     Some(Identifier::new(ident_str.to_string()))
+  }
+
+  fn parse_call_expression(&mut self, func: Expression) -> Option<Expression> {
+    let args = match self.parse_call_args() {
+      Some(args) => args,
+      None => return None,
+    };
+    Some(
+      Expression::Call(
+        CallExpression::new(Box::new(func), args),
+      ),
+    )
+  }
+
+  fn parse_call_args(&mut self) -> Option<Vec<Expression>> {
+    let mut args = vec![];
+    if self.peek_token.is(token::Token::RBRACE) {
+      return Some(args);
+    }
+
+    self.next_token();
+    
+    let arg = match self.parse_expression(BinaryOperator::Lowest) {
+      Some(expr) => expr,
+      None => return None,
+    };
+    args.push(arg);
+
+    while self.peek_token.is(token::Token::COMMA) {
+      self.next_token();
+      self.next_token();
+
+      let arg = match self.parse_expression(BinaryOperator::Lowest) {
+        Some(expr) => expr,
+        None => return None,
+      };
+      args.push(arg);
+    }
+
+    if !self.expect_peek(token::Token::RPAREN) {
+      return None;
+    }
+
+    Some(args)
   }
 
   fn no_prefix_parse_error(&mut self) {
@@ -808,6 +868,56 @@ false;
       Infix::Plus,
       ExpressionLiteral::Str("y".to_string()),
     )
+  }
+
+  #[test]
+  fn test_parse_call_expression() {
+    let input = "add(1, 2 * 3, 4 + 5)";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let call = match &expr.value {
+      Expression::Call(call) => call,
+      _ => panic!("Expression should has Call, but got {:?}", &expr.value),
+    };
+
+    test_identifier(
+      &call.func,
+      "add",
+    );    
+
+    if call.args.len() != 3 {
+      panic!("func_expr.args should has only 3 statement, but got {}", call.args.len());
+    }
+
+    test_literal_expression(&call.args[0], ExpressionLiteral::Int(1));
+    test_infix_expression(
+      &call.args[1],
+      ExpressionLiteral::Int(2),
+      Infix::Asterisk,
+      ExpressionLiteral::Int(3),
+    );
+    test_infix_expression(
+      &call.args[2],
+      ExpressionLiteral::Int(4),
+      Infix::Plus,
+      ExpressionLiteral::Int(5),
+    );
   }
 
   #[test]

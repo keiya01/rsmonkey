@@ -36,6 +36,8 @@ pub enum Infix {
   Equal,
   /// `!=`
   NotEq,
+  /// `(`
+  Call,
 }
 
 impl fmt::Display for Infix {
@@ -49,6 +51,7 @@ impl fmt::Display for Infix {
       Infix::Lt => write!(f, "<"),
       Infix::Equal => write!(f, "=="),
       Infix::NotEq => write!(f, "!="),
+      Infix::Call => write!(f, "("),
     }
   }
 }

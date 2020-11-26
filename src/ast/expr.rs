@@ -11,6 +11,7 @@ pub enum Expression {
   Prefix(PrefixExpression),
   Infix(InfixExpression),
   If(IfExpression),
+  Call(CallExpression),
 }
 
 impl fmt::Display for Expression {
@@ -21,6 +22,7 @@ impl fmt::Display for Expression {
       Expression::Prefix(pre) => write!(f, "{}", pre),
       Expression::Infix(inf) => write!(f, "{}", inf),
       Expression::If(if_expr) => write!(f, "{}", if_expr),
+      Expression::Call(call_expr) => write!(f, "{}", call_expr),
     }
   }
 }
@@ -82,5 +84,35 @@ impl fmt::Display for IfExpression {
       write!(f, " else {}", alt)?;
     }
     Ok(())
+  }
+}
+
+#[derive(Debug)]
+pub struct CallExpression {
+  pub func: Box<Expression>, // Identifier or Func literal
+  pub args: Vec<Expression>,
+}
+
+impl CallExpression {
+  pub fn new(func: Box<Expression>, args: Vec<Expression>) -> CallExpression {
+    CallExpression { func, args }
+  }
+}
+
+impl fmt::Display for CallExpression {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}(", self.func)?;
+
+    let mut iter = self.args.iter();    
+    let mut next = iter.next();
+    while let Some(val) = next {
+      next = iter.next();
+      write!(f, "{}", val)?;
+      if let Some(_) = next {
+        write!(f, ", ")?;
+      }
+    }
+
+    write!(f, ")")
   }
 }

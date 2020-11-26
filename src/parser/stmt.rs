@@ -125,8 +125,8 @@ let foobar = 838383;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 3 {
@@ -169,8 +169,8 @@ return 993322;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 3 {

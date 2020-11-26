@@ -330,8 +330,8 @@ mod tests {
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -354,8 +354,8 @@ mod tests {
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -383,8 +383,8 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 2 {
@@ -436,8 +436,8 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if let Err(e) = p.check_parse_errors() {
-        panic!("{}", e);
+      if p.check_parse_errors() {
+        panic!();
       }
   
       if program.statements.len() != 1 {
@@ -544,8 +544,8 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if let Err(e) = p.check_parse_errors() {
-        panic!("{}", e);
+      if p.check_parse_errors() {
+        panic!();
       }
   
       if program.statements.len() != 1 {
@@ -674,8 +674,8 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if let Err(e) = p.check_parse_errors() {
-        panic!("{}", e);
+      if p.check_parse_errors() {
+        panic!();
       }
   
       let actual = format!("{}", program);
@@ -693,8 +693,8 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -748,8 +748,8 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -811,8 +811,8 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -878,8 +878,8 @@ false;
     let mut p = Parser::new(l);
 
     let program = p.parse_program();
-    if let Err(e) = p.check_parse_errors() {
-      panic!("{}", e);
+    if p.check_parse_errors() {
+      panic!();
     }
 
     if program.statements.len() != 1 {
@@ -933,8 +933,8 @@ false;
       let mut p = Parser::new(l);
   
       let program = p.parse_program();
-      if let Err(e) = p.check_parse_errors() {
-        panic!("{}", e);
+      if p.check_parse_errors() {
+        panic!();
       }
   
       if program.statements.len() != 1 {

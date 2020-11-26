@@ -58,17 +58,18 @@ impl Parser {
     }
   }
 
-  pub fn check_parse_errors(&self) -> Result<(), String> {
+  pub fn check_parse_errors(&self) -> bool {
     let errs = &self.errors;
     if errs.len() == 0 {
-      return Ok(());
+      return true;
     }
 
     eprintln!("error: Parser has {} errors", errs.len());
     for err in errs.into_iter() {
       eprintln!("error: Parser Error: {}", err);
     }
-    let msg = format!("error: {} parser errors occurred.", errs.len());
-    return Err(msg.to_string());
+    eprintln!("error: {} parser errors occurred.", errs.len());
+
+    return false;
   }
 }

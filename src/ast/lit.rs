@@ -1,9 +1,12 @@
 use std::fmt;
+use super::ident::Identifier;
+use super::stmt::BlockStatement;
 
 #[derive(Debug)]
 pub enum Literal {
   Integer(Integer),
   Boolean(Boolean),
+  Func(Func),
 }
 
 impl fmt::Display for Literal {
@@ -11,6 +14,7 @@ impl fmt::Display for Literal {
     match self {
       Literal::Integer(int) => write!(f, "{}", int),
       Literal::Boolean(v) => write!(f, "{}", v),
+      Literal::Func(func) => write!(f, "{}", func),
     }
   }
 }
@@ -46,5 +50,28 @@ impl Boolean {
 impl fmt::Display for Boolean {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", &self.value)
+  }
+}
+
+#[derive(Debug)]
+pub struct Func {
+  pub args: Vec<Identifier>,
+  pub body: BlockStatement,
+}
+
+impl Func {
+  pub fn new(args: Vec<Identifier>, body: BlockStatement) -> Func {
+    Func { args, body }
+  }
+}
+
+impl fmt::Display for Func {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "fn(")?;
+    for arg in &self.args {
+      write!(f, "{}, ", &arg.value)?;
+    }
+    write!(f, ") {}", &self.body)?;
+    Ok(())
   }
 }

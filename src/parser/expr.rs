@@ -43,6 +43,7 @@ impl Parser {
       token::Token::BANG | token::Token::MINUS => self.parse_prefix_expression(),
       token::Token::LPAREN => self.parse_grouped_expression(),
       token::Token::IF => self.parse_if_expression(),
+      token::Token::FUNCTION => self.parse_func_literal(),
       _ => {
         self.no_prefix_parse_error();
         return None;
@@ -173,8 +174,84 @@ impl Parser {
     )
   }
 
+  fn parse_func_literal(&mut self) -> Option<Expression> {
+    if !self.expect_peek(token::Token::LPAREN) {
+      return None;
+    }
+
+    let args = match self.parse_func_args() {
+      Some(args) => args,
+      None => return None,
+    };
+
+    if !self.expect_peek(token::Token::LBRACE) {
+      return None;
+    }
+
+    let body = self.parse_block_statement();
+
+    Some(
+      Expression::Literal(
+        Literal::Func(
+          Func::new(args, body),
+        )
+      ),
+    )
+  }
+
+  fn parse_func_args(&mut self) -> Option<Vec<Identifier>> {
+    let mut args: Vec<Identifier> = vec![];
+
+    if self.peek_token.is(token::Token::RPAREN) {
+      self.next_token();
+      return Some(args);
+    }
+
+    self.next_token();
+
+    let ident = match self.only_parse_identifier() {
+      Some(ident) => ident,
+      None => return None,
+    };
+    args.push(ident);
+
+    while self.peek_token.is(token::Token::COMMA) {
+      self.next_token();
+      self.next_token();
+  
+      let ident = match self.only_parse_identifier() {
+        Some(ident) => ident,
+        None => return None,
+      };
+      args.push(ident);
+    }
+
+    if !self.expect_peek(token::Token::RPAREN) {
+      return None;
+    }
+
+    Some(args)
+  }
+
+  fn only_parse_identifier(&mut self) -> Option<Identifier> {
+    let ident_str = match &self.current_token {
+      token::Token::IDENT(s) => s,
+      _ => {
+        self.not_support_literal_error("args");
+        return None;
+      }
+    };
+
+    Some(Identifier::new(ident_str.to_string()))
+  }
+
   fn no_prefix_parse_error(&mut self) {
     let msg = format!("no prefix parse function for {:?}", self.current_token);
+    self.errors.push(msg);
+  }
+
+  fn not_support_literal_error(&mut self, place: &str) {
+    let msg = format!("{:?} is not supported in {:?}", self.current_token, place);
     self.errors.push(msg);
   }
 }
@@ -664,6 +741,118 @@ false;
     };
 
     test_identifier(&alt_expr.value, "y");
+  }
+
+  #[test]
+  fn test_func_expression() {
+    let input = "fn(x, y) { x + y; }";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let lit = match &expr.value {
+      Expression::Literal(lit) => lit,
+      _ => panic!("Expression should has Literal, but got {:?}", &expr),
+    };
+
+    let func_expr = match &lit {
+      Literal::Func(func) => func,
+      _ => panic!("Literal should has Func, but got {:?}", &lit),
+    };
+
+    if func_expr.args.len() != 2 {
+      panic!("func_expr.args should has only 2 statement, but got {}", func_expr.args.len());
+    }
+
+    test_identifier(
+      &Expression::Identifier(func_expr.args[0].clone()),
+      "x",
+    );
+    test_identifier(
+      &Expression::Identifier(func_expr.args[1].clone()),
+      "y",
+    );
+
+    if func_expr.body.statements.len() != 1 {
+      panic!(
+        "func_expr.body.statements should has only 1 statement, but got {}",
+        func_expr.body.statements.len(),
+      );
+    }
+
+    let body_expr = match &func_expr.body.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!(
+        "program.statements should has ExpressionStatement, but got {:?}",
+        program.statements[0],
+      ),
+    };
+
+    test_infix_expression(
+      &body_expr.value,
+      ExpressionLiteral::Str("x".to_string()),
+      Infix::Plus,
+      ExpressionLiteral::Str("y".to_string()),
+    )
+  }
+
+  #[test]
+  fn test_func_args_expression() {
+    let tests: Vec<(&str, Vec<&str>)> = vec![
+      ("fn() {}", vec![]),
+      ("fn(x) {}", vec!["x"]),
+      ("fn(x, y, z) {}", vec!["x", "y", "z"]),
+    ];
+
+    for (input, args) in tests.into_iter() {
+      let l = lexer::Lexer::new(input.to_string());
+      let mut p = Parser::new(l);
+  
+      let program = p.parse_program();
+      if let Err(e) = p.check_parse_errors() {
+        panic!("{}", e);
+      }
+  
+      if program.statements.len() != 1 {
+        panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+      }
+  
+      let expr = match &program.statements[0] {
+        Statement::Expr(expr) => expr,
+        _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+      };
+  
+      let lit = match &expr.value {
+        Expression::Literal(lit) => lit,
+        _ => panic!("Expression should has Literal, but got {:?}", &expr),
+      };
+  
+      let func_expr = match &lit {
+        Literal::Func(func) => func,
+        _ => panic!("Literal should has Func, but got {:?}", &lit),
+      };
+  
+      for (i, arg) in args.into_iter().enumerate() {
+        test_identifier(
+          &Expression::Identifier(func_expr.args[i].clone()),
+          arg,
+        )
+      }
+    }
   }
 
   enum ExpressionLiteral {

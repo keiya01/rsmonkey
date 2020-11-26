@@ -744,7 +744,7 @@ false;
   }
 
   #[test]
-  fn test_func_expression() {
+  fn test_parse_func_expression() {
     let input = "fn(x, y) { x + y; }";
 
     let l = lexer::Lexer::new(input.to_string());
@@ -766,7 +766,7 @@ false;
 
     let lit = match &expr.value {
       Expression::Literal(lit) => lit,
-      _ => panic!("Expression should has Literal, but got {:?}", &expr),
+      _ => panic!("Expression should has Literal, but got {:?}", &expr.value),
     };
 
     let func_expr = match &lit {

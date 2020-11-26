@@ -6,6 +6,11 @@ fn log_token(buf: String) {
   let l = lexer::Lexer::new(buf);
   let mut p = parser::Parser::new(l);
   let program = p.parse_program();
+
+  if let Err(e) = p.check_parse_errors() {
+    eprintln!("{}", e);
+  }
+
   println!("{}", program);
 }
 

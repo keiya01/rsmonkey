@@ -77,9 +77,9 @@ impl IfExpression {
 
 impl fmt::Display for IfExpression {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "if ({}) {{ {} }}", self.condition, self.consequence)?;
+    write!(f, "if({}) {}", self.condition, self.consequence)?;
     if let Some(alt) = &self.alternative {
-      write!(f, " else {{ {} }}", alt)?;
+      write!(f, " else {}", alt)?;
     }
     Ok(())
   }

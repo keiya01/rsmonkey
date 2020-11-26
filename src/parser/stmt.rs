@@ -107,3 +107,81 @@ impl Parser {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::lexer;
+  use super::*;
+
+  #[test]
+  fn test_parse_let_statement() {
+    let input = "
+let x = 5;
+let y = 10;
+let foobar = 838383;
+";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 3 {
+      panic!("program.statements does not contain 3 statements. got={}", program.statements.len());
+    }
+
+    let tests = vec![
+      Identifier::new("x".to_string()),
+      Identifier::new("y".to_string()),
+      Identifier::new("foobar".to_string()),
+    ];
+
+    
+    for (i, tt) in tests.into_iter().enumerate() {
+      let stmt = &program.statements[i];
+      comp_let_statement(stmt, tt);
+    }
+  }
+
+  fn comp_let_statement(stmt: &Statement, tt: Identifier) {
+    match stmt {
+      Statement::Let(_) => (),
+      _ => panic!("stmt.token_literal() not 'let'. get={:?}", stmt),
+    };
+
+    if let Statement::Let(let_stmt) = stmt {
+      assert_eq!(&let_stmt.ident.value, &tt.value, "expect={}, actual={}", &tt.value, &let_stmt.ident.value);
+    }
+  }
+  
+  #[test]
+  fn test_parse_return_statement() {
+    let input = "
+return 5;
+return 10;
+return 993322;
+";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 3 {
+      panic!("program.statements does not contain 3 statements. got={}", program.statements.len());
+    }
+    
+    for stmt in &program.statements {
+      match stmt {
+        Statement::Return(_) => (),
+        _ => panic!("ReturnStatement is not included, got {:?}", stmt),
+      }
+    }
+  }
+}

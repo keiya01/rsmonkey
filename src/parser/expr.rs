@@ -178,3 +178,548 @@ impl Parser {
     self.errors.push(msg);
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::ast::stmt::{Statement};
+  use crate::lexer;
+  use super::*;
+
+  #[test]
+  fn test_parse_identifier_expression() {
+    let input = "foobar;";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    test_identifier(&expr.value, "foobar");
+  }
+
+  #[test]
+  fn test_parse_int_literal_expression() {
+    let input = "5;";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    test_integer_literal(&expr.value, &5);
+  }
+  
+  #[test]
+  fn test_boolean_expression() {
+    let input = "
+true;
+false;
+";
+
+    let tests = vec![true, false];
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 2 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    for (i, tt) in tests.iter().enumerate() {
+      let expr = match &program.statements[i] {
+        Statement::Expr(expr) => expr,
+        _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[i]),
+      };
+  
+      test_boolean(&expr.value, tt);
+    }
+  }
+  
+  #[test]
+  fn test_parse_prefix_expression() {
+    struct PrefixExpressionTest {
+      input: String,
+      operator: Prefix,
+      right: ExpressionLiteral,
+    }
+    let prefix_expression_tests = vec![
+      PrefixExpressionTest { 
+        input: "!5;".to_string(),
+        operator: Prefix::Bang,
+        right: ExpressionLiteral::Int(5),
+      },
+      PrefixExpressionTest {
+        input: "-15;".to_string(),
+        operator: Prefix::Minus,
+        right: ExpressionLiteral::Int(15),
+      },
+      PrefixExpressionTest {
+        input: "!true;".to_string(),
+        operator: Prefix::Bang,
+        right: ExpressionLiteral::Bool(true),
+      },
+      PrefixExpressionTest {
+        input: "!false;".to_string(),
+        operator: Prefix::Bang,
+        right: ExpressionLiteral::Bool(false),
+      },
+    ];
+
+    for tt in prefix_expression_tests.into_iter() {
+      let l = lexer::Lexer::new(tt.input.clone());
+      let mut p = Parser::new(l);
+  
+      let program = p.parse_program();
+      if let Err(e) = p.check_parse_errors() {
+        panic!("{}", e);
+      }
+  
+      if program.statements.len() != 1 {
+        panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+      }
+  
+      let expr = match &program.statements[0] {
+        Statement::Expr(expr) => expr,
+        _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+      };
+  
+      let pre = match &expr.value {
+        Expression::Prefix(pre) => pre,
+        _ => panic!("Expression should has PrefixExpression, got {:?}", &expr.value)
+      };
+
+      if &pre.operator != &tt.operator {
+        panic!("Prefix should has '{:?}', but got '{:?}'", &tt.operator, &pre.operator);
+      }
+
+      test_literal_expression(&pre.right, tt.right);
+    }
+  }
+
+  #[test]
+  fn test_parse_infix_expression() {
+    struct InfixExpressionTest {
+      input: String,
+      left: ExpressionLiteral,
+      operator: Infix,
+      right: ExpressionLiteral,
+    }
+    let infix_expression_tests = vec![
+      InfixExpressionTest {
+        input: "5 + 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Plus,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 - 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Minus,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 * 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Asterisk,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 / 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Slash,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 > 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Gt,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 < 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Lt,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 == 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::Equal,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "5 != 5;".to_string(),
+        left: ExpressionLiteral::Int(5),
+        operator: Infix::NotEq,
+        right: ExpressionLiteral::Int(5),
+      },
+      InfixExpressionTest { 
+        input: "true == true;".to_string(),
+        left: ExpressionLiteral::Bool(true),
+        operator: Infix::Equal,
+        right: ExpressionLiteral::Bool(true),
+      },
+      InfixExpressionTest { 
+        input: "true != false;".to_string(),
+        left: ExpressionLiteral::Bool(true),
+        operator: Infix::NotEq,
+        right: ExpressionLiteral::Bool(false),
+      },
+      InfixExpressionTest { 
+        input: "false == false;".to_string(),
+        left: ExpressionLiteral::Bool(false),
+        operator: Infix::Equal,
+        right: ExpressionLiteral::Bool(false),
+      },
+    ];
+
+    for tt in infix_expression_tests.into_iter() {
+      let l = lexer::Lexer::new(tt.input.clone());
+      let mut p = Parser::new(l);
+  
+      let program = p.parse_program();
+      if let Err(e) = p.check_parse_errors() {
+        panic!("{}", e);
+      }
+  
+      if program.statements.len() != 1 {
+        panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+      }
+  
+      let expr = match &program.statements[0] {
+        Statement::Expr(expr) => expr,
+        _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+      };
+
+      test_infix_expression(&expr.value, tt.left, tt.operator, tt.right);
+    }
+  }
+
+  fn test_infix_expression(expr: &Expression, left: ExpressionLiteral, operator: Infix, right: ExpressionLiteral) {
+    let inf = match expr {
+      Expression::Infix(inf) => inf,
+      _ => panic!("Expression should has InfixExpression, got {:?}", expr),
+    };
+    
+    test_literal_expression(&inf.left, left);
+    
+    if &inf.operator != &operator {
+      panic!("Infix should has '{:?}', but got '{:?}'", &operator, &inf.operator);
+    }
+
+    test_literal_expression(&inf.right, right);
+  }
+
+  #[test]
+  fn test_operator_precedence_parsing() {
+    struct PrecedenceTest {
+      input: String,
+      expected: String,
+    }
+    let precedence_tests = [
+      PrecedenceTest { 
+        input: "true".to_string(),
+        expected: "true".to_string(),
+      },
+      PrecedenceTest { 
+        input: "false".to_string(),
+        expected: "false".to_string(),
+      },
+      PrecedenceTest { 
+        input: "3 > 5 == false".to_string(),
+        expected: "((3 > 5) == false)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "3 < 5 == true".to_string(),
+        expected: "((3 < 5) == true)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "-a + b".to_string(),
+        expected: "((-a) + b)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "!-a".to_string(),
+        expected: "(!(-a))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a + b + c".to_string(),
+        expected: "((a + b) + c)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a + b - c".to_string(),
+        expected: "((a + b) - c)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a * b * c".to_string(),
+        expected: "((a * b) * c)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a * b / c".to_string(),
+        expected: "((a * b) / c)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a + b / c".to_string(),
+        expected: "(a + (b / c))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a + b * c + d / e - f".to_string(),
+        expected: "(((a + (b * c)) + (d / e)) - f)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "3 + 4; -5 * 5".to_string(),
+        expected: "(3 + 4)((-5) * 5)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "5 > 4 == 3 < 4".to_string(),
+        expected: "((5 > 4) == (3 < 4))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "5 < 4 != 3 > 4".to_string(),
+        expected: "((5 < 4) != (3 > 4))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "3 + 4 * 5 == 3 * 1 + 4 * 5".to_string(),
+        expected: "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "1 + (2 + 3) + 4".to_string(),
+        expected: "((1 + (2 + 3)) + 4)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "(5 + 5) * 2".to_string(),
+        expected: "((5 + 5) * 2)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "2 / (5 + 5)".to_string(),
+        expected: "(2 / (5 + 5))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "-(5 + 5)".to_string(),
+        expected: "(-(5 + 5))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "!(true == true)".to_string(),
+        expected: "(!(true == true))".to_string(),
+      },
+    ];
+
+    for tt in precedence_tests.iter() {
+      let l = lexer::Lexer::new(tt.input.clone());
+      let mut p = Parser::new(l);
+  
+      let program = p.parse_program();
+      if let Err(e) = p.check_parse_errors() {
+        panic!("{}", e);
+      }
+  
+      let actual = format!("{}", program);
+      if actual != tt.expected {
+        panic!("expected={}, actual={}", tt.expected, actual);
+      }
+    }
+  }
+
+  #[test]
+  fn test_parse_if_expression() {
+    let input = "if (x < y) { x };";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let if_expr = match &expr.value {
+      Expression::If(if_expr) => if_expr,
+      _ => panic!("Expression should has IfExpression, but got {:?}", expr.value)
+    };
+
+    test_infix_expression(
+      &if_expr.condition,
+      ExpressionLiteral::Str("x".to_string()),
+      Infix::Lt,
+      ExpressionLiteral::Str("y".to_string()),
+    );
+
+    if if_expr.consequence.statements.len() != 1 {
+      panic!(
+        "if_expr.consequence.statements should has only 1 statement, but got {}",
+        if_expr.consequence.statements.len(),
+      );
+    }
+
+    let con_expr = match &if_expr.consequence.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!(
+        "if_expr.consequence.statements[0] should has ExpressionStatement, but got {:?}",
+        if_expr.consequence.statements[0],
+      ),
+    };
+
+    test_identifier(&con_expr.value, "x");
+
+    if let Some(_) = if_expr.alternative {
+      panic!("if_expr.alternative should be None, but {:?}", if_expr.alternative);
+    }
+  }
+
+  #[test]
+  fn test_parse_else_expression() {
+    let input = "if (x < y) { x } else { y };";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if let Err(e) = p.check_parse_errors() {
+      panic!("{}", e);
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+
+    let if_expr = match &expr.value {
+      Expression::If(if_expr) => if_expr,
+      _ => panic!("Expression should has IfExpression, but got {:?}", expr.value)
+    };
+
+    test_infix_expression(
+      &if_expr.condition,
+      ExpressionLiteral::Str("x".to_string()),
+      Infix::Lt,
+      ExpressionLiteral::Str("y".to_string()),
+    );
+
+    if if_expr.consequence.statements.len() != 1 {
+      panic!(
+        "if_expr.consequence.statements should has only 1 statement, but got {}",
+        if_expr.consequence.statements.len(),
+      );
+    }
+
+    let con_expr = match &if_expr.consequence.statements[0] {
+      Statement::Expr(con_expr) => con_expr,
+      _ => panic!(
+        "if_expr.consequence.statements[0] should has ExpressionStatement, but got {:?}",
+        if_expr.consequence.statements[0],
+      ),
+    };
+
+    test_identifier(&con_expr.value, "x");
+
+    let else_expr = match &if_expr.alternative {
+      Some(else_expr) => else_expr,
+      None => panic!("if_expr.alternative should has alternative, but got {:?}", if_expr.alternative),
+    };
+
+    let alt_expr = match &else_expr.statements[0] {
+      Statement::Expr(alt_expr) => alt_expr,
+      _ => panic!("if_expr.alternative should has alternative, but got {:?}", if_expr.alternative),
+    };
+
+    test_identifier(&alt_expr.value, "y");
+  }
+
+  enum ExpressionLiteral {
+    Int(i64),
+    Bool(bool),
+    Str(String),
+  }
+
+  fn test_literal_expression(expr: &Expression, expect: ExpressionLiteral) {
+    match expect {
+      ExpressionLiteral::Int(v) => test_integer_literal(expr, &v),
+      ExpressionLiteral::Str(v) => test_identifier(expr, &v),
+      ExpressionLiteral::Bool(v) => test_boolean(expr, &v),
+    };
+  }
+
+  fn test_identifier(expr: &Expression, value: &str) {
+    let ident = match &expr {
+      Expression::Identifier(ident) => ident,
+      _ => panic!("Expression should has Identifier, got {}", &expr)
+    };
+
+    if &ident.value != value {
+      panic!("Identifier should has foobar, but got {}", &ident.value);
+    }
+  }
+
+  fn test_integer_literal(expr: &Expression, comp: &i64) {
+    let lit = match &expr {
+      Expression::Literal(lit) => lit,
+      _ => panic!("Expression should has Literal, got {}", &expr)
+    };
+    
+    let int = match &lit {
+      Literal::Integer(int) => int,
+      _ => panic!("Literal should has Integer, got {}", &lit)
+    };
+
+    if &int.value != comp {
+      panic!("Identifier should has {}, but got {}", int.value, comp);
+    }
+  }
+
+  fn test_boolean(expr: &Expression, comp: &bool) {
+    let lit = match &expr {
+      Expression::Literal(lit) => lit,
+      _ => panic!("Expression should has Literal, got {}", &expr)
+    };
+    
+    let int = match &lit {
+      Literal::Boolean(v) => v,
+      _ => panic!("Literal should has Boolean, got {}", &lit)
+    };
+
+    if &int.value != comp {
+      panic!("Identifier should has {}, but got {}", int.value, comp);
+    }
+  }
+}

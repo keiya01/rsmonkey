@@ -1,4 +1,4 @@
-use kmonkey::lepl;
+use rsmonkey::lepl;
 
 fn main() {
     lepl::start();

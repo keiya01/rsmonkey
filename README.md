@@ -1,3 +1,2 @@
-# kmonkey
+# rsmonkey
 
-Monkey lang: https://monkeylang.org/

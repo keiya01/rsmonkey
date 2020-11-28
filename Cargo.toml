@@ -1,5 +1,5 @@
 [package]
-name = "kmonkey"
+name = "rsmonkey"
 version = "0.1.0"
 authors = ["keiya01 <keiya.s.0210@gmail.com>"]
 edition = "2018"

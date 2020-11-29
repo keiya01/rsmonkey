@@ -6,6 +6,7 @@ pub enum Object {
   Integer(Integer),
   Boolean(Boolean),
   Return(Return),
+  Error(Error),
   Null,
 }
 
@@ -15,6 +16,7 @@ impl fmt::Display for Object {
       Object::Integer(val) => write!(f, "{}", val),
       Object::Boolean(val) => write!(f, "{}", val),
       Object::Return(val) => write!(f, "{}", val),
+      Object::Error(val) => write!(f, "{}", val),
       Object::Null => write!(f, "null"),
     }
   }
@@ -62,5 +64,22 @@ impl Return {
 impl fmt::Display for Return {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", self.value)
+  }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Error {
+  pub value: String,
+}
+
+impl Error {
+  pub fn new(value: String) -> Error {
+    Error { value }
+  }
+}
+
+impl fmt::Display for Error {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "[Internal Error] {}", self.value)
   }
 }

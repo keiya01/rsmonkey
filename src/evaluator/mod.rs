@@ -21,6 +21,9 @@ fn eval_program(node: &Program) -> object::Object {
       Statement::Expr(expr) => eval_expression(&expr.value),
       Statement::Return(rtn) => {
         let expr = eval_expression(&rtn.value);
+        if is_error(&expr) {
+          return expr;
+        }
         object::Object::Return(
           object::Return::new(Box::new(expr)),
         )
@@ -31,6 +34,10 @@ fn eval_program(node: &Program) -> object::Object {
     if let object::Object::Return(return_obj) = result {
       return *return_obj.value;
     }
+
+    if let object::Object::Error(_) = result {
+      return result;
+    }
   }
   result
 }
@@ -40,11 +47,20 @@ fn eval_expression(expr: &Expression) -> object::Object {
     Expression::Literal(lit) => eval_literal(&lit),
     Expression::Prefix(pre) => {
       let right = eval_expression(&pre.right);
+      if is_error(&right) {
+        return right;
+      }
       eval_prefix_expression(&pre.operator, right)
     },
     Expression::Infix(inf) => {
       let left = eval_expression(&inf.left);
+      if is_error(&left) {
+        return left;
+      }
       let right = eval_expression(&inf.right);
+      if is_error(&right) {
+        return right;
+      }
       eval_infix_expression(left, &inf.operator, right)
     },
     Expression::If(if_expr) => eval_if_expression(if_expr),
@@ -81,7 +97,9 @@ fn eval_minus_operator_expression(right: object::Object) -> object::Object {
   match right {
     object::Object::Integer(int) => 
       object::Object::Integer(object::Integer::new(-int.value)),
-    _ => NULL,
+    _ => new_error(
+      format!("unknown operator: -{}", right),
+    ),
   }
 }
 
@@ -90,10 +108,22 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
     return eval_integer_infix_expression(left, operator, right);
   }
 
+  match (&left, &right) {
+    (object::Object::Boolean(_), object::Object::Boolean(_))
+    | (object::Object::Null, object::Object::Null)
+    // TODO: | (object::Object::String(_), object::Object::String(_))
+    => (),
+    _ => return new_error(
+      format!("type mismatch: {} {} {}", left, operator, right),
+    ),
+  }
+
   match operator {
     Infix::Equal => native_bool_to_boolean_object(left == right),
     Infix::NotEq => native_bool_to_boolean_object(left != right),
-    _ => NULL,
+    _ => new_error(
+      format!("unknown operator: {} {} {}", left, operator, right),
+    ),
   }
 }
 
@@ -118,7 +148,9 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
     Infix::Gt => return native_bool_to_boolean_object(left > right),
     Infix::Equal => return native_bool_to_boolean_object(left == right),
     Infix::NotEq => return native_bool_to_boolean_object(left != right),
-    _ => return NULL,
+    _ => return new_error(
+      format!("unknown operator: {} {} {}", left, operator, right),
+    ),
   };
 
   object::Object::Integer(int)
@@ -126,6 +158,9 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
 
 fn eval_if_expression(expr: &IfExpression) -> object::Object {
   let condition = eval_expression(&expr.condition);
+  if is_error(&condition) {
+    return condition;
+  }
 
   if is_truthy(condition) {
     eval_block_statement(&expr.consequence)
@@ -143,6 +178,9 @@ fn eval_block_statement(block: &BlockStatement) -> object::Object {
       Statement::Expr(expr) => eval_expression(&expr.value),
       Statement::Return(rtn) => {
         let expr = eval_expression(&rtn.value);
+        if is_error(&expr) {
+          return expr;
+        }
         object::Object::Return(
           object::Return::new(Box::new(expr)),
         )
@@ -150,11 +188,24 @@ fn eval_block_statement(block: &BlockStatement) -> object::Object {
       _ => NULL,
     };
 
-    if let object::Object::Return(_) = result {
-      return result;
+    match result {
+      object::Object::Return(_)
+      | object::Object::Error(_) => return result,
+      _ => (),
     }
   }
   result
+}
+
+fn new_error(msg: String) -> object::Object {
+  object::Object::Error(object::Error::new(msg))
+}
+
+fn is_error(obj: &object::Object) -> bool {
+  match obj {
+    object::Object::Error(_) => true,
+    _ => false,
+  }
 }
 
 fn is_object_integer(obj: &object::Object) -> bool {
@@ -302,6 +353,38 @@ if(10 > 1) {
       for (input, expected) in tests.into_iter() {
         let evaluated = test_eval(input);
         test_integer_object(evaluated, expected);
+      }
+  }
+
+  #[test]
+  fn test_error_handling() {
+      let tests: Vec<(&str, &str)> = vec![
+        ("5 + true", "type mismatch: 5 + true"),
+        ("5 + true; 5;", "type mismatch: 5 + true"),
+        ("-true", "unknown operator: -true"),
+        ("true + false", "unknown operator: true + false"),
+        ("5; true + false; 5", "unknown operator: true + false"),
+        ("if(10 > 1) { true + false }", "unknown operator: true + false"),
+        ("
+if(10 > 1) {
+  if(10 > 1) {
+    return true + false;
+  }
+  return 1;
+}
+", "unknown operator: true + false"),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        match evaluated {
+          object::Object::Error(err) => {
+            if &err.value != expected {
+              panic!("wrong error message. actual={}, expected={}", &err.value, expected);
+            }
+          }
+          _ => panic!("Object should has Error, but got {:?}", evaluated),
+        };
       }
   }
 

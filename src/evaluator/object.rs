@@ -1,7 +1,7 @@
 use std::fmt;
 use std::cmp::PartialEq;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Object {
   Integer(Integer),
   Boolean(Boolean),
@@ -22,7 +22,7 @@ impl fmt::Display for Object {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Integer {
   pub value: i64,
 }
@@ -39,7 +39,7 @@ impl fmt::Display for Integer {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Boolean {
   pub value: bool,
 }
@@ -50,7 +50,7 @@ impl fmt::Display for Boolean {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Return {
   pub value: Box<Object>,
 }
@@ -67,7 +67,7 @@ impl fmt::Display for Return {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Error {
   pub value: String,
 }

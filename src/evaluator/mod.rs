@@ -1,6 +1,6 @@
 use crate::ast::Program;
-use crate::ast::stmt::{Statement};
-use crate::ast::expr::{Expression};
+use crate::ast::stmt::{Statement, BlockStatement};
+use crate::ast::expr::{Expression, IfExpression};
 use crate::ast::lit::{Literal};
 use crate::ast::operator::{Prefix, Infix};
 
@@ -11,19 +11,28 @@ const FALSE: object::Object = object::Object::Boolean(object::Boolean { value: f
 const NULL: object::Object = object::Object::Null;
 
 pub fn eval(node: Program) -> object::Object {
-  let mut result: object::Object = NULL;
-  for stmt in &node.statements {
-    result = eval_statement(stmt);
-  }
-  result
+  eval_program(&node)
 }
 
-fn eval_statement(statement: &Statement) -> object::Object {
-  match statement {
-    Statement::Expr(expr) => eval_expression(&expr.value),
-    _ => NULL,
-  }
+fn eval_program(node: &Program) -> object::Object {
+  let mut result: object::Object = NULL;
+  for stmt in &node.statements {
+    result = match stmt {
+      Statement::Expr(expr) => eval_expression(&expr.value),
+      Statement::Return(rtn) => {
+        let expr = eval_expression(&rtn.value);
+        object::Object::Return(
+          object::Return::new(Box::new(expr)),
+        )
+      },
+      _ => NULL,
+    };
 
+    if let object::Object::Return(return_obj) = result {
+      return *return_obj.value;
+    }
+  }
+  result
 }
 
 fn eval_expression(expr: &Expression) -> object::Object {
@@ -38,6 +47,7 @@ fn eval_expression(expr: &Expression) -> object::Object {
       let right = eval_expression(&inf.right);
       eval_infix_expression(left, &inf.operator, right)
     },
+    Expression::If(if_expr) => eval_if_expression(if_expr),
     _ => NULL,
   }
 }
@@ -114,10 +124,55 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
   object::Object::Integer(int)
 }
 
+fn eval_if_expression(expr: &IfExpression) -> object::Object {
+  let condition = eval_expression(&expr.condition);
+
+  if is_truthy(condition) {
+    eval_block_statement(&expr.consequence)
+  } else if let Some(alt) = &expr.alternative {
+    eval_block_statement(&alt)
+  } else {
+    NULL
+  }
+}
+
+fn eval_block_statement(block: &BlockStatement) -> object::Object {
+  let mut result: object::Object = NULL;
+  for stmt in &block.statements {
+    result = match stmt {
+      Statement::Expr(expr) => eval_expression(&expr.value),
+      Statement::Return(rtn) => {
+        let expr = eval_expression(&rtn.value);
+        object::Object::Return(
+          object::Return::new(Box::new(expr)),
+        )
+      },
+      _ => NULL,
+    };
+
+    if let object::Object::Return(_) = result {
+      return result;
+    }
+  }
+  result
+}
+
 fn is_object_integer(obj: &object::Object) -> bool {
   match obj {
     object::Object::Integer(_) => true,
     _ => false,
+  }
+}
+
+fn is_truthy(obj: object::Object) -> bool {
+  if obj == TRUE {
+    true
+  } else if obj == FALSE {
+    false
+  } else if obj == NULL {
+    false
+  } else {
+    true
   }
 }
 
@@ -206,6 +261,50 @@ mod tests {
       }
   }
 
+  #[test]
+  fn test_if_else_expression() {
+      let tests: Vec<(&str, Option<i64>)> = vec![
+        ("if(true) { 10 }", Some(10)),
+        ("if(false) { 10 }", None),
+        ("if(1) { 10 }", Some(10)),
+        ("if(1 < 2) { 10 }", Some(10)),
+        ("if(1 > 2) { 10 }", None),
+        ("if(1 > 2) { 10 } else { 20 }", Some(20)),
+        ("if(1 < 2) { 10 } else { 20 }", Some(10)),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        match expected {
+          Some(exp) => test_integer_object(evaluated, exp),
+          None => test_null_object(evaluated),
+        }
+      }
+  }
+
+  #[test]
+  fn test_return_expression() {
+      let tests: Vec<(&str, i64)> = vec![
+        ("return 10;", 10),
+        ("return 10; 9;", 10),
+        ("return 2 * 5; 9;", 10),
+        ("9; return 2 * 5; 9;", 10),
+        ("
+if(10 > 1) {
+  if(10 > 1) {
+    return 10;
+  }
+  return 1;
+}
+", 10),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        test_integer_object(evaluated, expected);
+      }
+  }
+
   fn test_eval(input: &str) -> object::Object {
     let l = Lexer::new(input.to_string());
     let mut p = Parser::new(l);
@@ -230,5 +329,12 @@ mod tests {
     };
 
     assert_eq!(val.value, expected, "actual={}, expected={}", val.value, expected);
+  }
+
+  fn test_null_object(obj: object::Object) {
+    match &obj {
+      object::Object::Null => (),
+      _ => panic!("Object should has NULL object, but got {:?}", obj),
+    };
   }
 }

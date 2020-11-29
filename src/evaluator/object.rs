@@ -5,6 +5,7 @@ use std::cmp::PartialEq;
 pub enum Object {
   Integer(Integer),
   Boolean(Boolean),
+  Return(Return),
   Null,
 }
 
@@ -13,6 +14,7 @@ impl fmt::Display for Object {
     match self {
       Object::Integer(val) => write!(f, "{}", val),
       Object::Boolean(val) => write!(f, "{}", val),
+      Object::Return(val) => write!(f, "{}", val),
       Object::Null => write!(f, "null"),
     }
   }
@@ -41,6 +43,23 @@ pub struct Boolean {
 }
 
 impl fmt::Display for Boolean {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.value)
+  }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Return {
+  pub value: Box<Object>,
+}
+
+impl Return {
+  pub fn new(value: Box<Object>) -> Return {
+    Return { value }
+  }
+}
+
+impl fmt::Display for Return {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", self.value)
   }

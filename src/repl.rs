@@ -1,6 +1,8 @@
-use std::io::{self, Write};
 use std::rc::Rc;
 use std::cell::RefCell;
+
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 use crate::{lexer, parser, evaluator};
 
@@ -17,14 +19,26 @@ fn log_token(buf: String, env: &mut Rc<RefCell<evaluator::environment::Environme
 }
 
 pub fn start() {
+  let mut rl = Editor::<()>::new();
   let mut env = evaluator::environment::Environment::new();
   loop {
-    print!("> ");
-    io::stdout().flush().unwrap();
-
-    let mut buf = String::new();
-    let stdin = io::stdin();
-    stdin.read_line(&mut buf).unwrap();
-    log_token(buf, &mut env);
+    let readline = rl.readline(">> ");
+    match readline {
+      Ok(line) => {
+        log_token(line, &mut env);
+      },
+      Err(ReadlineError::Interrupted) => {
+        println!("CTRL-C");
+        break
+      },
+      Err(ReadlineError::Eof) => {
+        println!("CTRL-D");
+        break
+      },
+      Err(err) => {
+        println!("Error: {:?}", err);
+        break
+      }
+    }
   }
 }

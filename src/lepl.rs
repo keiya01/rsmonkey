@@ -1,8 +1,10 @@
 use std::io::{self, Write};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use crate::{lexer, parser, evaluator};
 
-fn log_token(buf: String, env: &mut evaluator::environment::Environment) {
+fn log_token(buf: String, env: &mut Rc<RefCell<evaluator::environment::Environment>>) {
   let l = lexer::Lexer::new(buf);
   let mut p = parser::Parser::new(l);
   let program = p.parse_program();

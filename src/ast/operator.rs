@@ -1,7 +1,7 @@
 use std::cmp::{PartialEq, PartialOrd};
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Prefix {
   /// `-`
   Minus,
@@ -18,7 +18,7 @@ impl fmt::Display for Prefix {
   }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Infix {
   /// `+`
   Plus,

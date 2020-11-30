@@ -1,6 +1,9 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use crate::ast::Program;
 use crate::ast::stmt::{Statement, BlockStatement};
-use crate::ast::expr::{Expression, IfExpression};
+use crate::ast::expr::{Expression, IfExpression, CallExpression};
 use crate::ast::ident::{Identifier};
 use crate::ast::lit::{Literal};
 use crate::ast::operator::{Prefix, Infix};
@@ -14,11 +17,11 @@ const TRUE: object::Object = object::Object::Boolean(object::Boolean { value: tr
 const FALSE: object::Object = object::Object::Boolean(object::Boolean { value: false });
 const NULL: object::Object = object::Object::Null;
 
-pub fn eval(node: Program, env: &mut Environment) -> object::Object {
+pub fn eval(node: Program, env: &Rc<RefCell<Environment>>) -> object::Object {
   eval_program(&node, env)
 }
 
-fn eval_program(node: &Program, env: &mut Environment) -> object::Object {
+fn eval_program(node: &Program, env: &Rc<RefCell<Environment>>) -> object::Object {
   let mut result: object::Object = NULL;
   for stmt in &node.statements {
     result = eval_statement(stmt, env);
@@ -34,9 +37,9 @@ fn eval_program(node: &Program, env: &mut Environment) -> object::Object {
   result
 }
 
-fn eval_expression(expr: &Expression, env: &mut Environment) -> object::Object {
+fn eval_expression(expr: &Expression, env: &Rc<RefCell<Environment>>) -> object::Object {
   match expr {
-    Expression::Literal(lit) => eval_literal(&lit),
+    Expression::Literal(lit) => eval_literal(&lit, env),
     Expression::Prefix(pre) => {
       let right = eval_expression(&pre.right, env);
       if is_error(&right) {
@@ -57,17 +60,19 @@ fn eval_expression(expr: &Expression, env: &mut Environment) -> object::Object {
     },
     Expression::If(if_expr) => eval_if_expression(if_expr, env),
     Expression::Identifier(ident) => eval_ident_expression(ident, env),
-    _ => NULL,
+    Expression::Call(call) => eval_call_expression(call, env),
   }
 }
 
-fn eval_literal(lit: &Literal) -> object::Object {
+fn eval_literal(lit: &Literal, env: &Rc<RefCell<Environment>>) -> object::Object {
   match lit {
     Literal::Integer(int) => object::Object::Integer(
       object::Integer::new(int.value),
     ),
     Literal::Boolean(val) => native_bool_to_boolean_object(val.value),
-    _ => return NULL,
+    Literal::Func(func) => object::Object::Func(
+      object::Func::new(func.args.clone(), func.body.clone(), Rc::clone(env))
+    ),
   }
 }
 
@@ -149,7 +154,7 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
   object::Object::Integer(int)
 }
 
-fn eval_if_expression(expr: &IfExpression, env: &mut Environment) -> object::Object {
+fn eval_if_expression(expr: &IfExpression, env: &Rc<RefCell<Environment>>) -> object::Object {
   let condition = eval_expression(&expr.condition, env);
   if is_error(&condition) {
     return condition;
@@ -164,7 +169,7 @@ fn eval_if_expression(expr: &IfExpression, env: &mut Environment) -> object::Obj
   }
 }
 
-fn eval_block_statement(block: &BlockStatement, env: &mut Environment) -> object::Object {
+fn eval_block_statement(block: &BlockStatement, env: &Rc<RefCell<Environment>>) -> object::Object {
   let mut result: object::Object = NULL;
   for stmt in &block.statements {
     result = eval_statement(stmt, env);
@@ -178,7 +183,7 @@ fn eval_block_statement(block: &BlockStatement, env: &mut Environment) -> object
   result
 }
 
-fn eval_statement(stmt: &Statement, env: &mut Environment) -> object::Object {
+fn eval_statement(stmt: &Statement, env: &Rc<RefCell<Environment>>) -> object::Object {
   match stmt {
     Statement::Expr(expr) => eval_expression(&expr.value, env),
     Statement::Return(rtn) => {
@@ -195,15 +200,15 @@ fn eval_statement(stmt: &Statement, env: &mut Environment) -> object::Object {
       if is_error(&expr) {
         return expr;
       }
-      env.set(&let_stmt.ident.value, expr.clone());
+      env.borrow_mut().set(&let_stmt.ident.value, expr.clone());
       expr
     },
     _ => NULL,
   }
 }
 
-fn eval_ident_expression(ident: &Identifier, env: &mut Environment) -> object::Object {
-  match env.get(&ident.value) {
+fn eval_ident_expression(ident: &Identifier, env: &Rc<RefCell<Environment>>) -> object::Object {
+  match env.borrow().get(&ident.value) {
     Some(val) => val.clone(),
     None => new_error(format!("identifier not found: {}", ident.value)),
   }
@@ -218,6 +223,55 @@ fn is_error(obj: &object::Object) -> bool {
     object::Object::Error(_) => true,
     _ => false,
   }
+}
+
+fn eval_call_expression(call: &CallExpression, env: &Rc<RefCell<Environment>>) -> object::Object {
+  let func = eval_expression(&call.func, env);
+  if is_error(&func) {
+    return func;
+  }
+
+  let mut args = eval_expressions(&call.args, env);
+  if args.len() == 1 && is_error(&args[0]) {
+    return args.pop().unwrap();
+  }
+
+  return apply_func(func, args);
+}
+
+fn eval_expressions(args: &Vec<Expression>, env: &Rc<RefCell<Environment>>) -> Vec<object::Object> {
+  let mut result: Vec<object::Object> = vec![];
+  for arg in args {
+    let evaluated = eval_expression(arg, env);
+    if is_error(&evaluated) {
+      return vec![evaluated];
+    }
+    result.push(evaluated);
+  }
+  result
+}
+
+fn apply_func(obj: object::Object, args: Vec<object::Object>) -> object::Object {
+  let func = match obj {
+    object::Object::Func(func) => func,
+    _ => return new_error(format!("not a function: {}", obj)),
+  };
+
+  let env = Environment::new_enclosed_env(Rc::clone(&func.env));
+  for (i, arg) in args.into_iter().enumerate() {
+    (&env).borrow_mut().set(&func.args[i].value, arg);
+  }
+
+  let evaluated = eval_block_statement(&func.body, &env);
+
+  unwrap_returned_value(evaluated)
+}
+
+fn unwrap_returned_value(obj: object::Object) -> object::Object {
+  if let object::Object::Return(rtn) = obj {
+    return *rtn.value;
+  }
+  obj
 }
 
 fn is_object_integer(obj: &object::Object) -> bool {
@@ -383,6 +437,56 @@ if(10 > 1) {
   }
 
   #[test]
+  fn test_func_object() {
+      let evaluated = test_eval("fn(x) { x + 2 }");
+      let func = match evaluated {
+        object::Object::Func(func) => func,
+        _ => panic!("Object should has Func, but got {:?}", evaluated)
+      };
+
+      if func.args.len() != 1 {
+        panic!("Func should has 1 args, but got {}", func.args.len());
+      }
+
+      if &func.args[0].value != "x" {
+        panic!("func.args[0] should be 'x', but got {}", func.args[0].value);
+      }
+
+      if &format!("{}", func.body) != "{ (x + 2) }" {
+        panic!("func.body should be '(x + 2)', but got {}", func.body);
+      }
+  }
+
+  #[test]
+  fn test_func_application() {
+      let tests: Vec<(&str, i64)> = vec![
+        ("let f = fn(x) { x; }; f(5);", 5),
+        ("let f = fn(x) { return x; }; f(5);", 5),
+        ("let double = fn(x) { x * 2; }; double(5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
+        ("let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20),
+        ("let add = fn(x, y) { if(x > 10) { x + y } else { add(x + 1, y) }; }; add(0, 9);", 20),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        test_integer_object(test_eval(input), expected);
+      }
+  }
+
+  #[test]
+  fn test_closure() {
+      let input = "
+let new_adder = fn(x) {
+  fn(y) { x + y };
+};
+let f = new_adder(2);
+f(3)
+";
+
+      test_integer_object(test_eval(input), 5);
+  }
+
+  #[test]
   fn test_error_handling() {
       let tests: Vec<(&str, &str)> = vec![
         ("5 + true", "type mismatch: 5 + true"),
@@ -419,7 +523,7 @@ if(10 > 1) {
     let l = Lexer::new(input.to_string());
     let mut p = Parser::new(l);
     let program = p.parse_program();
-    let mut env = Environment::new();
+    let mut env = Rc::new(Environment::new());
 
     return eval(program, &mut env);
   }

@@ -2,7 +2,7 @@ use std::fmt;
 use super::ident::Identifier;
 use super::stmt::BlockStatement;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
   Integer(Integer),
   Boolean(Boolean),
@@ -19,7 +19,7 @@ impl fmt::Display for Literal {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Integer {
   pub value: i64,
 }
@@ -36,7 +36,7 @@ impl fmt::Display for Integer {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Boolean {
   pub value: bool,
 }
@@ -53,7 +53,7 @@ impl fmt::Display for Boolean {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Func {
   pub args: Vec<Identifier>,
   pub body: BlockStatement,

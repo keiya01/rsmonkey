@@ -1,5 +1,5 @@
-use rsmonkey::lepl;
+use rsmonkey::repl;
 
 fn main() {
-    lepl::start();
+    repl::start();
 }

@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use rsmonkey::{evaluator, start, exec};
+use src::{evaluator, start, exec};
 
 fn main() {
     let mut environment = evaluator::environment::Environment::new();

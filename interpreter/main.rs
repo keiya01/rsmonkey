@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use src::{evaluator, start, exec};
+use interpreter::{evaluator, start, exec};
 
 fn main() {
     let mut environment = evaluator::environment::Environment::new();

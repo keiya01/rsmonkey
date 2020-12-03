@@ -1,2 +1,5 @@
 /target
 *.txt
+node_modules
+dist
+web/src/wasm

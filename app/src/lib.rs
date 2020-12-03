@@ -45,6 +45,6 @@ impl Component for Model {
 }
 
 #[wasm_bindgen(start)]
-pub fn run_app() {
+pub fn run() {
     App::<Model>::new().mount_to_body();
 }

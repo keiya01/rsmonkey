@@ -26,7 +26,7 @@ module.exports = {
       title: "rsmonkey Editor",
     }),
     new WasmPackPlugin({
-      crateDirectory: path.resolve("..", "app"),
+      crateDirectory: path.resolve(__dirname, "crate"),
       outDir: path.resolve(__dirname, "src", "wasm"),
     }),
   ],

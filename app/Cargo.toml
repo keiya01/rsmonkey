@@ -10,5 +10,6 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-yew = "0.17"
+interpreter = { path = "../interpreter" }
+yew = { version = "0.17", features = ["services"]}
 wasm-bindgen = "0.2.67"

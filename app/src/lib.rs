@@ -1,13 +1,31 @@
+use std::rc::Rc;
+use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
+use yew::web_sys::HtmlTextAreaElement;
+use interpreter::{lexer, parser, evaluator};
+use evaluator::environment::Environment;
+
+fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> String {
+    let l = lexer::Lexer::new(buf);
+    let mut p = parser::Parser::new(l);
+    let program = p.parse_program();
+
+    if p.errors.len() > 0 {
+        return "unexpected error occurred".to_string();
+    }
+
+    format!("{}", evaluator::eval(program, env))
+}
 
 struct Model {
     link: ComponentLink<Self>,
-    value: i64,
+    textarea: NodeRef,
+    result: String,
 }
 
 enum Msg {
-    AddOne,
+    Run,
 }
 
 impl Component for Model {
@@ -16,13 +34,21 @@ impl Component for Model {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
             link,
-            value: 0,
+            textarea: NodeRef::default(),
+            result: String::new(),
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::AddOne => self.value += 1
+            Msg::Run => {
+                let elm = match self.textarea.cast::<HtmlTextAreaElement>() {
+                    Some(elm) => elm,
+                    None => return false,
+                };
+                let mut env = Environment::new();
+                self.result = exec(elm.value(), &mut env);
+            }
         }
         true
     }
@@ -37,8 +63,9 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
-                <button onclick=self.link.callback(|_| Msg::AddOne)>{ "+1" }</button>
-                <p>{ self.value }</p>
+                <textarea ref=self.textarea.clone()></textarea>
+                <button onclick=self.link.callback(|_| Msg::Run)>{ "Run" }</button>
+                <div>{ format!("Result: {}", &self.result) }</div>
             </div>
         }
     }

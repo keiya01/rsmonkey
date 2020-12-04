@@ -16,6 +16,7 @@ checksum = "33954243bd79057c2de7338850b85983a44588021f8a5fee574a8888c6de4344"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "interpreter",
  "wasm-bindgen",
  "yew",
 ]
@@ -372,9 +373,6 @@ dependencies = [
 [[package]]
 name = "interpreter"
 version = "0.1.0"
-dependencies = [
- "rustyline",
-]
 
 [[package]]
 name = "itoa"
@@ -507,6 +505,14 @@ dependencies = [
  "getrandom",
  "redox_syscall",
  "rust-argon2",
+]
+
+[[package]]
+name = "repl"
+version = "0.1.0"
+dependencies = [
+ "interpreter",
+ "rustyline",
 ]
 
 [[package]]

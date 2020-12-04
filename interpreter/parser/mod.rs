@@ -16,7 +16,7 @@ pub struct Parser {
   l: lexer::Lexer,
   current_token: token::Token,
   peek_token: token::Token,
-  pub(super) errors: Vec<String>,
+  pub errors: Vec<String>,
 }
 
 impl Parser {

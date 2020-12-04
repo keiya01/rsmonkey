@@ -2,6 +2,7 @@ const path = require("path");
 const HTMLWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
+const MiniCSSExtractPlugin = require("mini-css-extract-plugin");
 
 const isDev = process.env.NODE_ENV !== "production";
 
@@ -20,6 +21,17 @@ module.exports = {
   },
   experiments: { asyncWebAssembly: true },
   devServer,
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: [MiniCSSExtractPlugin.loader, "css-loader"],
+      },
+    ],
+  },
+  resolve: {
+    extensions: [".js", ".css", ".json"]
+  },
   plugins: [
     new CleanWebpackPlugin(),
     new HTMLWebpackPlugin({
@@ -29,5 +41,6 @@ module.exports = {
       crateDirectory: path.resolve(__dirname, "crate"),
       outDir: path.resolve(__dirname, "src", "wasm"),
     }),
+    new MiniCSSExtractPlugin(),
   ],
 };

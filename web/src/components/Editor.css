@@ -1,0 +1,26 @@
+.editor__area {
+  display: block;
+  resize: none;
+  width: 100%;
+  min-height: 70vh;
+  border: none;
+  background-color: #424753;
+  color: #fff;
+  font-size: 16px;
+  padding: 10px 15px;
+  outline: none;
+}
+
+.editor__result-block {
+  background-color: #000;
+  font-size: 16px;
+  color: #fff;
+  width: 100%;
+  min-height: 30vh;
+  padding: 10px 15px;
+}
+
+.editor__result-block-title {
+  font-weight: bold;
+  margin-right: 5px;
+}

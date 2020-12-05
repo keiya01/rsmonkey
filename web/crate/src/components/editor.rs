@@ -33,7 +33,7 @@ pub struct Editor {
 
 pub enum Msg {
     Run,
-    NewLine,
+    NewLine(String),
 }
 
 impl Component for Editor {
@@ -70,12 +70,7 @@ count(0);
                 let mut env = Environment::new();
                 self.state.result = exec(elm.value(), &mut env);
             },
-            Msg::NewLine => {
-              let elm = match self.textarea.cast::<HtmlTextAreaElement>() {
-                Some(elm) => elm,
-                None => return false,
-              };
-              let val = &elm.value();
+            Msg::NewLine(val) => {
               self.state.lines = val.lines().collect::<Vec<&str>>().len() + 1;
             }
         }
@@ -103,7 +98,7 @@ count(0);
                   </div>
                   <textarea
                     class="editor__area"
-                    oninput=self.link.callback(|_| Msg::NewLine)
+                    oninput=self.link.callback(|e: InputData| Msg::NewLine(e.value))
                     ref=self.textarea.clone()
                   >
                     { &self.default_value }

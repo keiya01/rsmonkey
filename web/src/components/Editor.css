@@ -12,6 +12,7 @@
   height: 100%;
   width: 5%;
   text-align: center;
+  padding-top: 2px;
 }
 
 .editor__area-line-text {

@@ -35,7 +35,7 @@ module.exports = {
   plugins: [
     new CleanWebpackPlugin(),
     new HTMLWebpackPlugin({
-      title: "rsmonkey Editor",
+      title: "The rsmonkey Playground",
     }),
     new WasmPackPlugin({
       crateDirectory: path.resolve(__dirname, "crate"),

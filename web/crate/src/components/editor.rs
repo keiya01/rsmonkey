@@ -7,21 +7,21 @@ use evaluator::environment::Environment;
 
 use super::header::Header;
 
-fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> String {
+fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> Vec<String> {
     let l = lexer::Lexer::new(buf);
     let mut p = parser::Parser::new(l);
     let program = p.parse_program();
 
     if p.errors.len() > 0 {
-        return "unexpected error occurred".to_string();
+      return p.errors;
     }
 
-    format!("{}", evaluator::eval(program, env))
+    vec![format!("{}", evaluator::eval(program, env))]
 }
 
 struct State {
   lines: usize,
-  result: String,
+  result: Vec<String>,
 }
 
 pub struct Editor {
@@ -50,7 +50,7 @@ count(0);
 ";
         let state = State {
           lines: default_value.lines().collect::<Vec<&str>>().len() + 1,
-          result: "".into(),
+          result: vec![],
         };
         Self {
             link,
@@ -106,7 +106,9 @@ count(0);
                 </div>
                 <div class="editor__result-block">
                   <span class="editor__result-block-title">{ "Result:" }</span>
-                  { &self.state.result }
+                  <div>
+                    { for self.state.result.iter().map(|val| html! { <><span>{ &val }</span><br/></> }) }
+                  </div>
                 </div>
             </>
         }

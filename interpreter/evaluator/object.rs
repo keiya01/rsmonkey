@@ -12,6 +12,7 @@ use super::environment::Environment;
 pub enum Object {
   Integer(Integer),
   Boolean(Boolean),
+  Str(Str),
   Return(Return),
   Func(Func),
   Error(Error),
@@ -23,6 +24,7 @@ impl fmt::Display for Object {
     match self {
       Object::Integer(val) => write!(f, "{}", val),
       Object::Boolean(val) => write!(f, "{}", val),
+      Object::Str(val) => write!(f, "{}", val),
       Object::Return(val) => write!(f, "{}", val),
       Object::Func(val) => write!(f, "{}", val),
       Object::Error(val) => write!(f, "{}", val),
@@ -56,6 +58,23 @@ pub struct Boolean {
 impl fmt::Display for Boolean {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", self.value)
+  }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Str {
+  pub value: String,
+}
+
+impl Str {
+  pub fn new(value: String) -> Str {
+    Str { value }
+  }
+}
+
+impl fmt::Display for Str {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "\"{}\"", self.value)
   }
 }
 

@@ -76,6 +76,7 @@ impl Lexer {
       b'/' => token::Token::SLASH,
       b'<' => token::Token::LT,
       b'>' => token::Token::GT,
+      b'"' => self.read_string(),
       b'0'..=b'9' => return self.read_int(),
       b'a'..=b'z' | b'A'..=b'Z' | b'_' => return self.read_ident(),
       0 => token::Token::EOF,
@@ -115,6 +116,21 @@ impl Lexer {
 
     token::Token::INT(int.parse().unwrap())
   }
+
+  fn read_string(&mut self) -> token::Token {
+    let position = self.position + 1;
+    loop {
+      self.read_char();
+      if let b'"' = self.ch {
+        break;
+      }
+      if let b'0' = self.ch {
+        break;
+      }
+    }
+    let str_lit = &self.input[position..self.position];
+    token::Token::STRING(str_lit.to_string())
+  }
 }
 
 #[cfg(test)]
@@ -142,6 +158,8 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
+\"foobar\"
+\"foo bar\"
 ";
 
       let tests: Vec<token::Token> = vec![
@@ -218,6 +236,8 @@ if (5 < 10) {
         token::Token::NotEq,
         token::Token::INT(9),
         token::Token::SEMICOLON,
+        token::Token::STRING("foobar".to_string()),
+        token::Token::STRING("foo bar".to_string()),
         token::Token::EOF,
       ];
 

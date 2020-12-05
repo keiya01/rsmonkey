@@ -40,6 +40,7 @@ impl Parser {
     match &self.current_token {
       token::Token::IDENT(s) => self.parse_identifier(s.to_string()),
       token::Token::INT(int) => self.parse_integer_literal(*int),
+      token::Token::STRING(s) => self.parse_string_literal(s.clone()),
       token::Token::TRUE | token::Token::FALSE => self.parse_boolean_literal(),
       token::Token::BANG | token::Token::MINUS => self.parse_prefix_expression(),
       token::Token::LPAREN => self.parse_grouped_expression(),
@@ -86,6 +87,16 @@ impl Parser {
       Expression::Literal(
         Literal::Boolean(
           Boolean::new(self.current_token == token::Token::TRUE),
+        ),
+      ),
+    )
+  }
+
+  fn parse_string_literal(&self, lit: String) -> Option<Expression> {
+    Some(
+      Expression::Literal(
+        Literal::Str(
+          Str::new(lit),
         ),
       ),
     )
@@ -461,6 +472,36 @@ false;
   
       test_boolean(&expr.value, tt);
     }
+  }
+
+  #[test]
+  fn test_string_expression() {
+    let input = "\"Hello World\"";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let str_lit = match &expr.value {
+      Expression::Literal(Literal::Str(str_lit)) => str_lit,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    let expected = "Hello World";
+    assert_eq!(str_lit.value, expected, "actual={}, expect={}", str_lit.value, expected);
   }
   
   #[test]

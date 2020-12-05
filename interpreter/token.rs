@@ -9,6 +9,7 @@ pub enum Token {
   // 識別子 + リテラル
   IDENT(String),
   INT(i64),
+  STRING(String),
   
   // 演算子
   ASSIGN,
@@ -51,6 +52,7 @@ impl fmt::Display for Token {
       // 識別子 + リテラル
       Token::IDENT(s) => write!(f, "IDENT({})", s),
       Token::INT(i) => write!(f, "INT({})", i),
+      Token::STRING(s) => write!(f, "STRING({})", s),
       
       // 演算子
       Token::ASSIGN => write!(f, "ASSIGN"),

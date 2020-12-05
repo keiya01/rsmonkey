@@ -70,6 +70,9 @@ fn eval_literal(lit: &Literal, env: &Rc<RefCell<Environment>>) -> object::Object
       object::Integer::new(int.value),
     ),
     Literal::Boolean(val) => native_bool_to_boolean_object(val.value),
+    Literal::Str(val) => object::Object::Str(
+      object::Str::new(val.value.clone()),
+    ),
     Literal::Func(func) => object::Object::Func(
       object::Func::new(func.args.clone(), func.body.clone(), Rc::clone(env))
     ),
@@ -102,14 +105,17 @@ fn eval_minus_operator_expression(right: object::Object) -> object::Object {
 }
 
 fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::Object) -> object::Object {
-  if is_object_integer(&left) && is_object_integer(&right) {
+  if let (object::Object::Integer(_), object::Object::Integer(_)) = (&left, &right) {
     return eval_integer_infix_expression(left, operator, right);
+  }
+
+  if let (object::Object::Str(_), object::Object::Str(_)) = (&left, &right) {
+    return eval_string_infix_expression(left, operator, right);
   }
 
   match (&left, &right) {
     (object::Object::Boolean(_), object::Object::Boolean(_))
     | (object::Object::Null, object::Object::Null)
-    // TODO: | (object::Object::String(_), object::Object::String(_))
     => (),
     _ => return new_error(
       format!("type mismatch: {} {} {}", left, operator, right),
@@ -152,6 +158,25 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
   };
 
   object::Object::Integer(int)
+}
+
+fn eval_string_infix_expression(left: object::Object, operator: &Infix, right: object::Object) -> object::Object {
+  let (left, right) = if let (object::Object::Str(left), object::Object::Str(right)) = (left, right) {
+    (left.value, right.value)
+  } else {
+    return NULL;
+  };
+
+  let s = match operator {
+    Infix::Plus => object::Str::new(format!("{}{}", left, right)),
+    Infix::Equal => return native_bool_to_boolean_object(left == right),
+    Infix::NotEq => return native_bool_to_boolean_object(left != right),
+    _ => return new_error(
+      format!("unknown operator: \"{}\" {} \"{}\"", left, operator, right),
+    ),
+  };
+
+  object::Object::Str(s)
 }
 
 fn eval_if_expression(expr: &IfExpression, env: &Rc<RefCell<Environment>>) -> object::Object {
@@ -274,13 +299,6 @@ fn unwrap_returned_value(obj: object::Object) -> object::Object {
   obj
 }
 
-fn is_object_integer(obj: &object::Object) -> bool {
-  match obj {
-    object::Object::Integer(_) => true,
-    _ => false,
-  }
-}
-
 fn is_truthy(obj: object::Object) -> bool {
   if obj == TRUE {
     true
@@ -344,6 +362,9 @@ mod tests {
         ("1 == 1", true),
         ("1 != 1", false),
         ("1 == 2", false),
+        ("\"hello\" == \"hello\"", true),
+        ("\"hello\" == \"world\"", false),
+        ("\"hello\" != \"world\"", true),
         ("true == true", true),
         ("false == true", false),
         ("true == false", false),
@@ -362,14 +383,48 @@ mod tests {
   }
 
   #[test]
+  fn test_eval_string_expression() {
+      let tests: Vec<(&str, &str)> = vec![
+        ("\"Hello World!\"", "Hello World!"),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        let str_lit = match evaluated {
+          object::Object::Str(s) => s,
+          _ => panic!("Object should has Str, but got {}", evaluated),
+        };
+        assert_eq!(&str_lit.value, expected, "actual={}, expected={}", &str_lit.value, expected);
+      }
+  }
+
+  #[test]
+  fn test_string_concatenation() {
+      let tests: Vec<(&str, &str)> = vec![
+        ("\"Hello\" + \" \" + \"World!\"", "Hello World!"),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        let str_lit = match evaluated {
+          object::Object::Str(s) => s,
+          _ => panic!("Object should has Str, but got {}", evaluated),
+        };
+        assert_eq!(&str_lit.value, expected, "actual={}, expected={}", &str_lit.value, expected);
+      }
+  }
+
+  #[test]
   fn test_eval_bang_operator() {
       let tests: Vec<(&str, bool)> = vec![
         ("!true", false),
         ("!false", true),
         ("!5", false),
+        ("!\"hello\"", false),
         ("!!true", true),
         ("!!false", false),
         ("!!5", true),
+        ("!!\"hello\"", true),
       ];
 
       for (input, expected) in tests.into_iter() {
@@ -496,6 +551,7 @@ f(3)
         ("5; true + false; 5", "unknown operator: true + false"),
         ("if(10 > 1) { true + false }", "unknown operator: true + false"),
         ("foobar", "identifier not found: foobar"),
+        ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\""),
         ("
 if(10 > 1) {
   if(10 > 1) {

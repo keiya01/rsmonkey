@@ -6,6 +6,7 @@ use super::stmt::BlockStatement;
 pub enum Literal {
   Integer(Integer),
   Boolean(Boolean),
+  Str(Str),
   Func(Func),
 }
 
@@ -14,6 +15,7 @@ impl fmt::Display for Literal {
     match self {
       Literal::Integer(int) => write!(f, "{}", int),
       Literal::Boolean(v) => write!(f, "{}", v),
+      Literal::Str(v) => write!(f, "{}", v),
       Literal::Func(func) => write!(f, "{}", func),
     }
   }
@@ -48,6 +50,23 @@ impl Boolean {
 }
 
 impl fmt::Display for Boolean {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", &self.value)
+  }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Str {
+  pub value: String,
+}
+
+impl Str {
+  pub fn new(value: String) -> Str {
+    Str { value }
+  }
+}
+
+impl fmt::Display for Str {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}", &self.value)
   }

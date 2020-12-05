@@ -99,7 +99,7 @@ fn eval_minus_operator_expression(right: object::Object) -> object::Object {
     object::Object::Integer(int) => 
       object::Object::Integer(object::Integer::new(-int.value)),
     _ => new_error(
-      format!("unknown operator: -{}", right),
+      format!("unknown operator: -{}.", right),
     ),
   }
 }
@@ -118,7 +118,7 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
     | (object::Object::Null, object::Object::Null)
     => (),
     _ => return new_error(
-      format!("type mismatch: {} {} {}", left, operator, right),
+      format!("type mismatch: {} {} {}.", left, operator, right),
     ),
   }
 
@@ -126,7 +126,7 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
     Infix::Equal => native_bool_to_boolean_object(left == right),
     Infix::NotEq => native_bool_to_boolean_object(left != right),
     _ => new_error(
-      format!("unknown operator: {} {} {}", left, operator, right),
+      format!("unknown operator: {} {} {}.", left, operator, right),
     ),
   }
 }
@@ -153,7 +153,7 @@ fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: 
     Infix::Equal => return native_bool_to_boolean_object(left == right),
     Infix::NotEq => return native_bool_to_boolean_object(left != right),
     _ => return new_error(
-      format!("unknown operator: {} {} {}", left, operator, right),
+      format!("unknown operator: {} {} {}.", left, operator, right),
     ),
   };
 
@@ -172,7 +172,7 @@ fn eval_string_infix_expression(left: object::Object, operator: &Infix, right: o
     Infix::Equal => return native_bool_to_boolean_object(left == right),
     Infix::NotEq => return native_bool_to_boolean_object(left != right),
     _ => return new_error(
-      format!("unknown operator: \"{}\" {} \"{}\"", left, operator, right),
+      format!("unknown operator: \"{}\" {} \"{}\".", left, operator, right),
     ),
   };
 
@@ -235,7 +235,7 @@ fn eval_statement(stmt: &Statement, env: &Rc<RefCell<Environment>>) -> object::O
 fn eval_ident_expression(ident: &Identifier, env: &Rc<RefCell<Environment>>) -> object::Object {
   match env.borrow().get(&ident.value) {
     Some(val) => val.clone(),
-    None => new_error(format!("identifier not found: {}", ident.value)),
+    None => new_error(format!("identifier not found: {}.", ident.value)),
   }
 }
 
@@ -279,7 +279,7 @@ fn eval_expressions(args: &Vec<Expression>, env: &Rc<RefCell<Environment>>) -> V
 fn apply_func(obj: object::Object, args: Vec<object::Object>) -> object::Object {
   let func = match obj {
     object::Object::Func(func) => func,
-    _ => return new_error(format!("not a function: {}", obj)),
+    _ => return new_error(format!("not a function: {}.", obj)),
   };
 
   let env = Environment::new_enclosed_env(Rc::clone(&func.env));
@@ -544,14 +544,14 @@ f(3)
   #[test]
   fn test_error_handling() {
       let tests: Vec<(&str, &str)> = vec![
-        ("5 + true", "type mismatch: 5 + true"),
-        ("5 + true; 5;", "type mismatch: 5 + true"),
-        ("-true", "unknown operator: -true"),
-        ("true + false", "unknown operator: true + false"),
-        ("5; true + false; 5", "unknown operator: true + false"),
-        ("if(10 > 1) { true + false }", "unknown operator: true + false"),
-        ("foobar", "identifier not found: foobar"),
-        ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\""),
+        ("5 + true", "type mismatch: 5 + true."),
+        ("5 + true; 5;", "type mismatch: 5 + true."),
+        ("-true", "unknown operator: -true."),
+        ("true + false", "unknown operator: true + false."),
+        ("5; true + false; 5", "unknown operator: true + false."),
+        ("if(10 > 1) { true + false }", "unknown operator: true + false."),
+        ("foobar", "identifier not found: foobar."),
+        ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\"."),
         ("
 if(10 > 1) {
   if(10 > 1) {
@@ -559,7 +559,7 @@ if(10 > 1) {
   }
   return 1;
 }
-", "unknown operator: true + false"),
+", "unknown operator: true + false."),
       ];
 
       for (input, expected) in tests.into_iter() {

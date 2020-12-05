@@ -44,7 +44,7 @@ impl Parser {
   }
 
   pub(super) fn peek_error(&mut self, t: token::Token) {
-    let msg = format!("expected next token to be {:?}, got {:?} instead", t, self.peek_token);
+    let msg = format!("expected next token to be {:?}, got {:?} instead.", t, self.peek_token);
     self.errors.push(msg);
   }
 

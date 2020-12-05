@@ -317,12 +317,12 @@ impl Parser {
   }
 
   fn no_prefix_parse_error(&mut self) {
-    let msg = format!("no prefix parse function for {:?}", self.current_token);
+    let msg = format!("no prefix parse function for {:?}.", self.current_token);
     self.errors.push(msg);
   }
 
   fn not_support_literal_error(&mut self, place: &str) {
-    let msg = format!("{:?} is not supported in {:?}", self.current_token, place);
+    let msg = format!("{:?} is not supported in {:?}.", self.current_token, place);
     self.errors.push(msg);
   }
 }

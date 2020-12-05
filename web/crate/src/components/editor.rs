@@ -19,24 +19,44 @@ fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> String {
     format!("{}", evaluator::eval(program, env))
 }
 
+struct State {
+  lines: usize,
+  result: String,
+}
+
 pub struct Editor {
     link: ComponentLink<Self>,
+    state: State,
     textarea: NodeRef,
-    result: String,
+    default_value: String,
 }
 
 pub enum Msg {
     Run,
+    NewLine,
 }
 
 impl Component for Editor {
     type Message = Msg;
     type Properties = ();
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+      let default_value = "let count = fn(x) {
+  if(x > 10) {
+    return x;
+  }
+  count(x + 1);
+};
+count(0);
+";
+        let state = State {
+          lines: default_value.lines().collect::<Vec<&str>>().len() + 1,
+          result: "".into(),
+        };
         Self {
             link,
+            state,
             textarea: NodeRef::default(),
-            result: String::new(),
+            default_value: default_value.into(),
         }
     }
 
@@ -48,7 +68,15 @@ impl Component for Editor {
                     None => return false,
                 };
                 let mut env = Environment::new();
-                self.result = exec(elm.value(), &mut env);
+                self.state.result = exec(elm.value(), &mut env);
+            },
+            Msg::NewLine => {
+              let elm = match self.textarea.cast::<HtmlTextAreaElement>() {
+                Some(elm) => elm,
+                None => return false,
+              };
+              let val = &elm.value();
+              self.state.lines = val.lines().collect::<Vec<&str>>().len() + 1;
             }
         }
         true
@@ -62,21 +90,28 @@ impl Component for Editor {
     }
 
     fn view(&self) -> Html {
-        let default_value = "let count = fn(x) {
-  if(x > 10) {
-    return x;
-  }
-  count(x + 1);
-};
-count(0);
-";
         html! {
             <>
                 <Header on_click=self.link.callback(|_| Msg::Run) />
-                <textarea class="editor__area" ref=self.textarea.clone()>{ default_value }</textarea>
+                <div class="editor__area-block">
+                  <div class="editor__area-line">
+                    { 
+                      for (0..self.state.lines).collect::<Vec<usize>>().iter().map(|i| {
+                        html! { <span class="editor__area-line-text">{ i + 1 }</span> }
+                      })
+                    }
+                  </div>
+                  <textarea
+                    class="editor__area"
+                    oninput=self.link.callback(|_| Msg::NewLine)
+                    ref=self.textarea.clone()
+                  >
+                    { &self.default_value }
+                  </textarea>
+                </div>
                 <div class="editor__result-block">
                   <span class="editor__result-block-title">{ "Result:" }</span>
-                  { &self.result }
+                  { &self.state.result }
                 </div>
             </>
         }

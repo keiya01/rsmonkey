@@ -226,6 +226,9 @@ fn eval_statement(stmt: &Statement, env: &Rc<RefCell<Environment>>) -> object::O
       if is_error(&expr) {
         return expr;
       }
+      if let Some(_) = env.borrow().builtins.get(&let_stmt.ident.value) {
+        return new_error(format!("`{}` is already used as a builtin function.", &let_stmt.ident.value))
+      }
       env.borrow_mut().set(&let_stmt.ident.value, expr.clone());
       expr
     },
@@ -574,6 +577,7 @@ f(3)
         ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\"."),
         ("len(\"one\", \"two\")", "wrong number of argument: got=2, want=1."),
         ("len(1)", "argument to `len` not supported: got=1"),
+        ("let len = 0", "`len` is already used as a builtin function."),
         ("
 if(10 > 1) {
   if(10 > 1) {

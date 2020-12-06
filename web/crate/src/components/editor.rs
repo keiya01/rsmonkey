@@ -19,6 +19,10 @@ fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> Vec<String> {
     vec![format!("{}", evaluator::eval(program, env))]
 }
 
+fn count_lines(s: &str) -> usize {
+  s.chars().filter(|c| c == &'\n').count() + 1
+}
+
 struct State {
   lines: usize,
   result: Vec<String>,
@@ -49,7 +53,7 @@ impl Component for Editor {
 count(0);
 ";
         let state = State {
-          lines: default_value.lines().collect::<Vec<&str>>().len() + 1,
+          lines: count_lines(default_value),
           result: vec![],
         };
         Self {
@@ -71,7 +75,7 @@ count(0);
                 self.state.result = exec(elm.value(), &mut env);
             },
             Msg::NewLine(val) => {
-              self.state.lines = val.lines().collect::<Vec<&str>>().len() + 1;
+              self.state.lines = count_lines(&val);
             }
         }
         true

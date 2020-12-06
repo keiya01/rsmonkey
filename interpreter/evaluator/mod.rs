@@ -59,6 +59,17 @@ fn eval_expression(expr: &Expression, env: &Rc<RefCell<Environment>>) -> object:
       }
       eval_infix_expression(left, &inf.operator, right)
     },
+    Expression::Index(idx) => {
+      let left = eval_expression(&idx.left, env);
+      if is_error(&left) {
+        return left;
+      }
+      let index = eval_expression(&idx.index, env);
+      if is_error(&index) {
+        return index;
+      }
+      eval_index_expression(left, index)
+    },
     Expression::If(if_expr) => eval_if_expression(if_expr, env),
     Expression::Identifier(ident) => eval_ident_expression(ident, env),
     Expression::Call(call) => eval_call_expression(call, env),
@@ -74,6 +85,15 @@ fn eval_literal(lit: &Literal, env: &Rc<RefCell<Environment>>) -> object::Object
     Literal::Str(val) => object::Object::Str(
       object::Str::new(val.value.clone()),
     ),
+    Literal::Array(val) => {
+      let mut elms = eval_expressions(&val.elements, env);
+      if elms.len() == 1 && is_error(&elms[0]) {
+        return elms.pop().unwrap();
+      }
+      object::Object::Array(
+        object::Array::new(elms),
+      )
+    },
     Literal::Func(func) => object::Object::Func(
       object::Func::new(func.args.clone(), func.body.clone(), Rc::clone(env))
     ),
@@ -130,6 +150,26 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
       format!("unknown operator: {} {} {}.", left, operator, right),
     ),
   }
+}
+
+fn eval_index_expression(left: object::Object, index: object::Object) -> object::Object {
+  let index = match index {
+    object::Object::Integer(i) => i,
+    _ => return new_error(format!("specified index type is not supported: {}", index)),
+  };
+  match left {
+    object::Object::Array(arr) => eval_array_index_expression(arr, index),
+    _ => new_error(format!("index operator not supported: {}", left)),
+  }
+}
+
+#[allow(unused_comparisons)]
+fn eval_array_index_expression(arr: object::Array, idx: object::Integer) -> object::Object {
+  let idx = idx.value as usize;
+  if idx < 0 || idx > arr.elements.len() - 1 {
+    return NULL;
+  }
+  arr.elements[idx].clone()
 }
 
 fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: object::Object) -> object::Object {
@@ -421,6 +461,49 @@ mod tests {
           _ => panic!("Object should has Str, but got {}", evaluated),
         };
         assert_eq!(&str_lit.value, expected, "actual={}, expected={}", &str_lit.value, expected);
+      }
+  }
+
+  #[test]
+  fn test_eval_array_expression() {
+      let input = "[1, 2 * 2, 3 + 3]";
+
+      let evaluated = test_eval(input);
+      let arr_lit = match evaluated {
+        object::Object::Array(arr) => arr,
+        _ => panic!("Object should has Array, but got {}", evaluated),
+      };
+
+      if arr_lit.elements.len() != 3 {
+        panic!("array should has 3 items, but got {} items", arr_lit.elements.len());
+      }
+
+      test_integer_object(arr_lit.elements[0].clone(), 1);
+      test_integer_object(arr_lit.elements[1].clone(), 4);
+      test_integer_object(arr_lit.elements[2].clone(), 6);
+  }
+
+  #[test]
+  fn test_eval_index_expression() {
+      let tests: Vec<(&str, Option<i64>)> = vec![
+        ("[1, 2, 3][0]", Some(1)),
+        ("[1, 2, 3][1]", Some(2)),
+        ("[1, 2, 3][2]", Some(3)),
+        ("let i = 0; [1][i]", Some(1)),
+        ("[1, 2, 3][1 + 1]", Some(3)),
+        ("let arr = [1, 2, 3]; arr[2]", Some(3)),
+        ("let arr = [1, 2, 3]; arr[0] + arr[1] + arr[2];", Some(6)),
+        ("let arr = [1, 2, 3]; let i = arr[0]; arr[i];", Some(2)),
+        ("[1, 2, 3][3]", None),
+        ("[1, 2, 3][-1]", None),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        match expected {
+          Some(val) => test_integer_object(evaluated, val),
+          None => test_null_object(evaluated),
+        };
       }
   }
 

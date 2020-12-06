@@ -13,6 +13,7 @@ impl token::Token {
       token::Token::PLUS | token::Token::MINUS => BinaryOperator::Sum,
       token::Token::ASTERISK | token::Token::SLASH => BinaryOperator::Product,
       token::Token::LPAREN => BinaryOperator::Call,
+      token::Token::LBRACKET => BinaryOperator::Index,
       _ => BinaryOperator::Lowest,
     }
   }
@@ -44,6 +45,7 @@ impl Parser {
       token::Token::TRUE | token::Token::FALSE => self.parse_boolean_literal(),
       token::Token::BANG | token::Token::MINUS => self.parse_prefix_expression(),
       token::Token::LPAREN => self.parse_grouped_expression(),
+      token::Token::LBRACKET => self.parse_array_literal(),
       token::Token::IF => self.parse_if_expression(),
       token::Token::FUNCTION => self.parse_func_literal(),
       _ => {
@@ -64,6 +66,7 @@ impl Parser {
       token::Token::EQ |
       token::Token::NotEq => self.parse_infix_expression(left),
       token::Token::LPAREN => self.parse_call_expression(left),
+      token::Token::LBRACKET => self.parse_index_expression(left),
       _ => return None,
     }
   }
@@ -100,6 +103,18 @@ impl Parser {
         ),
       ),
     )
+  }
+
+  fn parse_array_literal(&mut self) -> Option<Expression> {
+    if let Some(elements) = self.parse_expression_list(token::Token::RBRACKET) {
+      Some(
+        Expression::Literal(
+          Literal::Array(Array::new(elements)),
+        ),
+      )
+    } else {
+      None
+    }
   }
 
   fn parse_prefix_expression(&mut self) -> Option<Expression> {
@@ -273,7 +288,7 @@ impl Parser {
   }
 
   fn parse_call_expression(&mut self, func: Expression) -> Option<Expression> {
-    let args = match self.parse_call_args() {
+    let args = match self.parse_expression_list(token::Token::RPAREN) {
       Some(args) => args,
       None => return None,
     };
@@ -284,36 +299,55 @@ impl Parser {
     )
   }
 
-  fn parse_call_args(&mut self) -> Option<Vec<Expression>> {
-    let mut args = vec![];
-    if self.peek_token.is(token::Token::RBRACE) {
-      return Some(args);
+  fn parse_index_expression(&mut self, left: Expression) -> Option<Expression> {
+    self.next_token();
+    let idx = if let Some(idx) = self.parse_expression(BinaryOperator::Lowest) {
+      idx
+    } else {
+      return None;
+    };
+
+    if !self.expect_peek(token::Token::RBRACKET) {
+      return None;
+    }
+
+    Some(
+      Expression::Index(
+        IndexExpression::new(Box::new(left), Box::new(idx)),
+      ),
+    )
+  }
+
+  fn parse_expression_list(&mut self, end_token: token::Token) -> Option<Vec<Expression>> {
+    let mut list = vec![];
+    if self.peek_token.is(end_token.clone()) {
+      return Some(list);
     }
 
     self.next_token();
     
-    let arg = match self.parse_expression(BinaryOperator::Lowest) {
+    let item = match self.parse_expression(BinaryOperator::Lowest) {
       Some(expr) => expr,
       None => return None,
     };
-    args.push(arg);
+    list.push(item);
 
     while self.peek_token.is(token::Token::COMMA) {
       self.next_token();
       self.next_token();
 
-      let arg = match self.parse_expression(BinaryOperator::Lowest) {
+      let item = match self.parse_expression(BinaryOperator::Lowest) {
         Some(expr) => expr,
         None => return None,
       };
-      args.push(arg);
+      list.push(item);
     }
 
-    if !self.expect_peek(token::Token::RPAREN) {
+    if !self.expect_peek(end_token) {
       return None;
     }
 
-    Some(args)
+    Some(list)
   }
 
   fn no_prefix_parse_error(&mut self) {
@@ -351,7 +385,7 @@ pub fn test_identifier(expr: &Expression, value: &str) {
   };
 
   if &ident.value != value {
-    panic!("Identifier should has foobar, but got {}", &ident.value);
+    panic!("Identifier should has {}, but got {}", value, &ident.value);
   }
 }
 
@@ -368,7 +402,7 @@ pub fn test_integer_literal(expr: &Expression, comp: &i64) {
   };
 
   if &int.value != comp {
-    panic!("Identifier should has {}, but got {}", int.value, comp);
+    panic!("Identifier should has {}, but got {}", comp, int.value);
   }
 }
 
@@ -444,7 +478,7 @@ mod tests {
   }
   
   #[test]
-  fn test_boolean_expression() {
+  fn test_parse_boolean_expression() {
     let input = "
 true;
 false;
@@ -475,7 +509,7 @@ false;
   }
 
   #[test]
-  fn test_string_expression() {
+  fn test_parse_string_expression() {
     let input = "\"Hello World\"";
 
     let l = lexer::Lexer::new(input.to_string());
@@ -502,6 +536,76 @@ false;
 
     let expected = "Hello World";
     assert_eq!(str_lit.value, expected, "actual={}, expect={}", str_lit.value, expected);
+  }
+
+  #[test]
+  fn test_parse_array_expression() {
+    let input = "[1, 2 * 2, 3 + 3]";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let arr_lit = match &expr.value {
+      Expression::Literal(Literal::Array(arr)) => arr,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if arr_lit.elements.len() != 3 {
+      panic!("Array literal should has 3 elements, but got {}", arr_lit.elements.len());
+    }
+
+    test_integer_literal(&arr_lit.elements[0], &1);
+    test_infix_expression(&arr_lit.elements[1], ExpressionLiteral::Int(2), Infix::Asterisk, ExpressionLiteral::Int(2));
+    test_infix_expression(&arr_lit.elements[2], ExpressionLiteral::Int(3), Infix::Plus, ExpressionLiteral::Int(3));
+  }
+
+  #[test]
+  fn test_parse_index_expression() {
+    let input = "arr[1 + 1]";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let index_expr = match &expr.value {
+      Expression::Index(index) => index,
+      _ => panic!("Expression should has IndexExpression, but got {:?}", expr.value),
+    };
+
+    test_identifier(&index_expr.left, "arr");
+    test_infix_expression(
+      &index_expr.index,
+      ExpressionLiteral::Int(1),
+      Infix::Plus,
+      ExpressionLiteral::Int(1),
+    );
   }
   
   #[test]
@@ -769,6 +873,14 @@ false;
       PrecedenceTest { 
         input: "!(true == true)".to_string(),
         expected: "(!(true == true))".to_string(),
+      },
+      PrecedenceTest { 
+        input: "a * [1, 2, 3, 4][b * c] * d".to_string(),
+        expected: "((a * ([1, 2, 3, 4][(b * c)])) * d)".to_string(),
+      },
+      PrecedenceTest { 
+        input: "add(a * b[2], b[1], 2 * [1, 2][1])".to_string(),
+        expected: "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))".to_string(),
       },
     ];
 

@@ -1,4 +1,6 @@
 use std::fmt;
+
+use crate::utils;
 use super::ident::Identifier;
 use super::lit::{Literal};
 use super::operator::{Prefix, Infix};
@@ -12,6 +14,7 @@ pub enum Expression {
   Infix(InfixExpression),
   If(IfExpression),
   Call(CallExpression),
+  Index(IndexExpression),
 }
 
 impl fmt::Display for Expression {
@@ -23,6 +26,7 @@ impl fmt::Display for Expression {
       Expression::Infix(inf) => write!(f, "{}", inf),
       Expression::If(if_expr) => write!(f, "{}", if_expr),
       Expression::Call(call_expr) => write!(f, "{}", call_expr),
+      Expression::Index(index) => write!(f, "{}", index),
     }
   }
 }
@@ -103,16 +107,26 @@ impl fmt::Display for CallExpression {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{}(", self.func)?;
 
-    let mut iter = self.args.iter();    
-    let mut next = iter.next();
-    while let Some(val) = next {
-      next = iter.next();
-      write!(f, "{}", val)?;
-      if let Some(_) = next {
-        write!(f, ", ")?;
-      }
-    }
+    utils::write_object_list(&self.args, f)?;
 
     write!(f, ")")
+  }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct IndexExpression {
+  pub left: Box<Expression>, // Identifier or Func literal
+  pub index: Box<Expression>,
+}
+
+impl IndexExpression {
+  pub fn new(left: Box<Expression>, index: Box<Expression>) -> IndexExpression {
+    IndexExpression { left, index }
+  }
+}
+
+impl fmt::Display for IndexExpression {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "({}[{}])", self.left, self.index)
   }
 }

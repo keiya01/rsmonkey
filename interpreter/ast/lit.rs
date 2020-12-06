@@ -1,12 +1,16 @@
 use std::fmt;
+
+use crate::utils;
 use super::ident::Identifier;
 use super::stmt::BlockStatement;
+use super::expr::Expression;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
   Integer(Integer),
   Boolean(Boolean),
   Str(Str),
+  Array(Array),
   Func(Func),
 }
 
@@ -16,6 +20,7 @@ impl fmt::Display for Literal {
       Literal::Integer(int) => write!(f, "{}", int),
       Literal::Boolean(v) => write!(f, "{}", v),
       Literal::Str(v) => write!(f, "{}", v),
+      Literal::Array(v) => write!(f, "{}", v),
       Literal::Func(func) => write!(f, "{}", func),
     }
   }
@@ -68,7 +73,26 @@ impl Str {
 
 impl fmt::Display for Str {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", &self.value)
+    write!(f, "\"{}\"", &self.value)
+  }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Array {
+  pub elements: Vec<Expression>,
+}
+
+impl Array {
+  pub fn new(elements: Vec<Expression>) -> Array {
+    Array { elements }
+  }
+}
+
+impl fmt::Display for Array {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "[")?;
+    utils::write_object_list(&self.elements, f)?;
+    write!(f, "]")
   }
 }
 
@@ -88,15 +112,7 @@ impl fmt::Display for Func {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "fn(")?;
 
-    let mut iter = self.args.iter();    
-    let mut next = iter.next();
-    while let Some(val) = next {
-      next = iter.next();
-      write!(f, "{}", val)?;
-      if let Some(_) = next {
-        write!(f, ", ")?;
-      }
-    }
+    utils::write_object_list(&self.args, f)?;
 
     write!(f, ") {}", &self.body)?;
     Ok(())

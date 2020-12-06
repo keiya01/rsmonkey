@@ -65,4 +65,5 @@ pub enum BinaryOperator {
   Product,
   Prefix,
   Call,
+  Index,
 }

@@ -8,15 +8,29 @@ use super::object::Object;
 pub struct Environment {
   store: HashMap<String, Object>,
   outer: Option<Rc<RefCell<Environment>>>,
+  pub builtins: Rc<HashMap<String, Object>>,
 }
 
 impl Environment {
-  pub fn new() -> Rc<RefCell<Environment>> {
-    Rc::new(RefCell::new(Environment { store: HashMap::new(), outer: None }))
+  pub fn new(builtins: Rc<HashMap<String, Object>>) -> Rc<RefCell<Environment>> {
+    Rc::new(RefCell::new(
+      Environment {
+        store: HashMap::new(),
+        outer: None,
+        builtins,
+      }
+    ))
   }
 
   pub fn new_enclosed_env(outer: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
-    Rc::new(RefCell::new(Environment { store: HashMap::new(), outer: Some(outer) }))
+    let builtins = Rc::clone(&outer.borrow().builtins);
+    Rc::new(RefCell::new(
+      Environment {
+        store: HashMap::new(),
+        outer: Some(outer),
+        builtins,
+      }
+    ))
   }
 
   pub fn get(&self, key: &str) -> Option<Object> {

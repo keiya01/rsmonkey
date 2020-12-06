@@ -7,7 +7,6 @@ use crate::ast::ident::Identifier;
 use crate::ast::stmt::BlockStatement;
 use super::environment::Environment;
 
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {
   Integer(Integer),
@@ -15,6 +14,7 @@ pub enum Object {
   Str(Str),
   Return(Return),
   Func(Func),
+  Builtin(Builtin),
   Error(Error),
   Null,
 }
@@ -27,6 +27,7 @@ impl fmt::Display for Object {
       Object::Str(val) => write!(f, "{}", val),
       Object::Return(val) => write!(f, "{}", val),
       Object::Func(val) => write!(f, "{}", val),
+      Object::Builtin(val) => write!(f, "{:?}", val),
       Object::Error(val) => write!(f, "{}", val),
       Object::Null => write!(f, "null"),
     }
@@ -124,6 +125,19 @@ impl fmt::Display for Func {
 
     write!(f, ") {}", &self.body)?;
     Ok(())
+  }
+}
+
+pub type BuiltinFunc = fn(Vec<Object>) -> Object;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Builtin {
+  pub func: BuiltinFunc,
+}
+
+impl Builtin {
+  pub fn new(func: BuiltinFunc) -> Builtin {
+    Builtin { func }
   }
 }
 

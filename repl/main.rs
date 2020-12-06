@@ -7,6 +7,8 @@ use rustyline::Editor;
 use std::{env, fs};
 
 use interpreter::{evaluator, lexer, parser};
+use evaluator::builtins;
+use evaluator::environment::{Environment};
 
 fn exec(buf: String, env: &mut Rc<RefCell<evaluator::environment::Environment>>) {
   let l = lexer::Lexer::new(buf);
@@ -43,7 +45,7 @@ fn start(env: &mut Rc<RefCell<evaluator::environment::Environment>>) {
 }
 
 fn main() {
-    let mut environment = evaluator::environment::Environment::new();
+    let mut environment = Environment::new(builtins::new_builtins());
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
         let filename = &args[1];

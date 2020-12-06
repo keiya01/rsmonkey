@@ -10,6 +10,7 @@ use crate::ast::operator::{Prefix, Infix};
 
 mod object;
 pub mod environment;
+pub mod builtins;
 
 use environment::Environment;
 
@@ -234,6 +235,11 @@ fn eval_statement(stmt: &Statement, env: &Rc<RefCell<Environment>>) -> object::O
 
 fn eval_ident_expression(ident: &Identifier, env: &Rc<RefCell<Environment>>) -> object::Object {
   match env.borrow().get(&ident.value) {
+    Some(val) => return val.clone(),
+    None => (),
+  }
+
+  match env.borrow().builtins.get(&ident.value) {
     Some(val) => val.clone(),
     None => new_error(format!("identifier not found: {}.", ident.value)),
   }
@@ -279,6 +285,7 @@ fn eval_expressions(args: &Vec<Expression>, env: &Rc<RefCell<Environment>>) -> V
 fn apply_func(obj: object::Object, args: Vec<object::Object>) -> object::Object {
   let func = match obj {
     object::Object::Func(func) => func,
+    object::Object::Builtin(builtin) => return (builtin.func)(args),
     _ => return new_error(format!("not a function: {}.", obj)),
   };
 
@@ -542,6 +549,19 @@ f(3)
   }
 
   #[test]
+  fn test_buildin_functions() {
+      let tests: Vec<(&str, i64)> = vec![
+        ("len(\"\")", 0),
+        ("len(\"four\")", 4),
+        ("len(\"hello world\")", 11),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        test_integer_object(test_eval(input), expected);
+      }
+  }
+
+  #[test]
   fn test_error_handling() {
       let tests: Vec<(&str, &str)> = vec![
         ("5 + true", "type mismatch: 5 + true."),
@@ -552,6 +572,8 @@ f(3)
         ("if(10 > 1) { true + false }", "unknown operator: true + false."),
         ("foobar", "identifier not found: foobar."),
         ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\"."),
+        ("len(\"one\", \"two\")", "wrong number of argument: got=2, want=1."),
+        ("len(1)", "argument to `len` not supported: got=1"),
         ("
 if(10 > 1) {
   if(10 > 1) {
@@ -579,7 +601,7 @@ if(10 > 1) {
     let l = Lexer::new(input.to_string());
     let mut p = Parser::new(l);
     let program = p.parse_program();
-    let mut env = Rc::new(Environment::new());
+    let mut env = Rc::new(Environment::new(builtins::new_builtins()));
 
     return eval(program, &mut env);
   }

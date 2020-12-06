@@ -4,6 +4,7 @@ use yew::prelude::*;
 use yew::web_sys::HtmlTextAreaElement;
 use interpreter::{lexer, parser, evaluator};
 use evaluator::environment::Environment;
+use evaluator::builtins;
 
 use super::header::Header;
 
@@ -71,7 +72,7 @@ count(0);
                     Some(elm) => elm,
                     None => return false,
                 };
-                let mut env = Environment::new();
+                let mut env = Environment::new(builtins::new_builtins());
                 self.state.result = exec(elm.value(), &mut env);
             },
             Msg::NewLine(val) => {

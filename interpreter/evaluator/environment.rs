@@ -8,27 +8,26 @@ use super::object::Object;
 pub struct Environment {
   store: HashMap<String, Object>,
   outer: Option<Rc<RefCell<Environment>>>,
-  pub builtins: Rc<HashMap<String, Object>>,
+  pub builtins: Option<HashMap<String, Object>>,
 }
 
 impl Environment {
-  pub fn new(builtins: Rc<HashMap<String, Object>>) -> Rc<RefCell<Environment>> {
+  pub fn new(builtins: HashMap<String, Object>) -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(
       Environment {
         store: HashMap::new(),
         outer: None,
-        builtins,
+        builtins: Some(builtins),
       }
     ))
   }
 
   pub fn new_enclosed_env(outer: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
-    let builtins = Rc::clone(&outer.borrow().builtins);
     Rc::new(RefCell::new(
       Environment {
         store: HashMap::new(),
         outer: Some(outer),
-        builtins,
+        builtins: None,
       }
     ))
   }
@@ -38,6 +37,19 @@ impl Environment {
       Some(val) => Some(val.clone()),
       None => match &self.outer {
         Some(env) => env.borrow().get(key),
+        None => None,
+      } 
+    }
+  }
+
+  pub fn get_builtin(&self, key: &str) -> Option<Object> {
+    match &self.builtins {
+      Some(builtins) => match builtins.get(key) {
+        Some(val) => Some(val.clone()),
+        None => None,
+      },
+      None => match &self.outer {
+        Some(env) => env.borrow().get_builtin(key),
         None => None,
       } 
     }

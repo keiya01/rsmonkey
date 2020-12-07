@@ -1,12 +1,11 @@
-use std::rc::Rc;
 use std::collections::HashMap;
 
 use super::object::{Object, Builtin, Integer, Error};
 
-pub fn new_builtins() -> Rc<HashMap<String, Object>> {
+pub fn new_builtins() -> HashMap<String, Object> {
   let mut hash = HashMap::new();
   hash.insert("len".into(), Object::Builtin(Builtin::new(len)));
-  Rc::new(hash)
+  hash
 }
 
 fn len(args: Vec<Object>) -> Object {

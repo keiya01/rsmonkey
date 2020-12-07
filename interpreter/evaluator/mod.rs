@@ -266,7 +266,7 @@ fn eval_statement(stmt: &Statement, env: &Rc<RefCell<Environment>>) -> object::O
       if is_error(&expr) {
         return expr;
       }
-      if let Some(_) = env.borrow().builtins.get(&let_stmt.ident.value) {
+      if let Some(_) = env.borrow().get_builtin(&let_stmt.ident.value) {
         return new_error(format!("`{}` is already used as a builtin function.", &let_stmt.ident.value))
       }
       env.borrow_mut().set(&let_stmt.ident.value, expr.clone());
@@ -282,7 +282,7 @@ fn eval_ident_expression(ident: &Identifier, env: &Rc<RefCell<Environment>>) -> 
     None => (),
   }
 
-  match env.borrow().builtins.get(&ident.value) {
+  match env.borrow().get_builtin(&ident.value) {
     Some(val) => val.clone(),
     None => new_error(format!("identifier not found: {}.", ident.value)),
   }
@@ -609,6 +609,7 @@ if(10 > 1) {
   fn test_func_application() {
       let tests: Vec<(&str, i64)> = vec![
         ("let f = fn(x) { x; }; f(5);", 5),
+        ("let f = fn() { 5; }; f();", 5),
         ("let f = fn(x) { return x; }; f(5);", 5),
         ("let double = fn(x) { x * 2; }; double(5);", 10),
         ("let add = fn(x, y) { x + y; }; add(5, 5);", 10),
@@ -640,6 +641,7 @@ f(3)
         ("len(\"\")", 0),
         ("len(\"four\")", 4),
         ("len(\"hello world\")", 11),
+        ("let f = fn() { len(\"abc\") }; f()", 3),
       ];
 
       for (input, expected) in tests.into_iter() {
@@ -688,6 +690,9 @@ if(10 > 1) {
     let l = Lexer::new(input.to_string());
     let mut p = Parser::new(l);
     let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
     let mut env = Rc::new(Environment::new(builtins::new_builtins()));
 
     return eval(program, &mut env);

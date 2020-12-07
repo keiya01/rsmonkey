@@ -134,18 +134,17 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
     return eval_string_infix_expression(left, operator, right);
   }
 
-  match (&left, &right) {
-    (object::Object::Boolean(_), object::Object::Boolean(_))
-    | (object::Object::Null, object::Object::Null)
-    => (),
+  let is_eq = match (&left, &right) {
+    (object::Object::Boolean(left), object::Object::Boolean(right)) => left.value == right.value,
+    (object::Object::Null, object::Object::Null) => true,
     _ => return new_error(
       format!("type mismatch: {} {} {}.", left, operator, right),
     ),
-  }
+  };
 
   match operator {
-    Infix::Equal => native_bool_to_boolean_object(left == right),
-    Infix::NotEq => native_bool_to_boolean_object(left != right),
+    Infix::Equal => native_bool_to_boolean_object(is_eq),
+    Infix::NotEq => native_bool_to_boolean_object(!is_eq),
     _ => new_error(
       format!("unknown operator: {} {} {}.", left, operator, right),
     ),
@@ -350,14 +349,10 @@ fn unwrap_returned_value(obj: object::Object) -> object::Object {
 }
 
 fn is_truthy(obj: object::Object) -> bool {
-  if obj == TRUE {
-    true
-  } else if obj == FALSE {
-    false
-  } else if obj == NULL {
-    false
-  } else {
-    true
+  match obj {
+    object::Object::Boolean(val) => val.value,
+    object::Object::Null => false,
+    _ => true,
   }
 }
 

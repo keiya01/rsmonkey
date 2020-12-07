@@ -8,7 +8,7 @@ use crate::ast::stmt::BlockStatement;
 use crate::utils;
 use super::environment::Environment;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Object {
   Integer(Integer),
   Boolean(Boolean),
@@ -82,7 +82,7 @@ impl fmt::Display for Str {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Return {
   pub value: Box<Object>,
 }
@@ -99,7 +99,7 @@ impl fmt::Display for Return {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Array {
   pub elements: Vec<Object>,
 }
@@ -118,7 +118,7 @@ impl fmt::Display for Array {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Func {
   pub args: Vec<Identifier>,
   pub body: BlockStatement,

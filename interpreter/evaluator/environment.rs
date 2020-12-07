@@ -4,15 +4,15 @@ use std::cell::RefCell;
 
 use super::object::Object;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Environment {
   store: HashMap<String, Object>,
   outer: Option<Rc<RefCell<Environment>>>,
-  pub builtins: Option<HashMap<String, Object>>,
+  pub builtins: Option<Rc<HashMap<String, Object>>>,
 }
 
 impl Environment {
-  pub fn new(builtins: HashMap<String, Object>) -> Rc<RefCell<Environment>> {
+  pub fn new(builtins: Rc<HashMap<String, Object>>) -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(
       Environment {
         store: HashMap::new(),

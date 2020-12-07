@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 
 use super::object::Object;
@@ -7,12 +7,12 @@ use super::object::Object;
 #[derive(Debug, Clone)]
 pub struct Environment {
   store: HashMap<String, Object>,
-  outer: Option<Rc<RefCell<Environment>>>,
-  pub builtins: Option<Rc<HashMap<String, Object>>>,
+  outer: Option<Weak<RefCell<Environment>>>,
+  pub builtins: Option<HashMap<String, Object>>,
 }
 
 impl Environment {
-  pub fn new(builtins: Rc<HashMap<String, Object>>) -> Rc<RefCell<Environment>> {
+  pub fn new(builtins: HashMap<String, Object>) -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(
       Environment {
         store: HashMap::new(),
@@ -22,7 +22,7 @@ impl Environment {
     ))
   }
 
-  pub fn new_enclosed_env(outer: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
+  pub fn new_enclosed_env(outer: Weak<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(
       Environment {
         store: HashMap::new(),
@@ -36,7 +36,7 @@ impl Environment {
     match self.store.get(key) {
       Some(val) => Some(val.clone()),
       None => match &self.outer {
-        Some(env) => env.borrow().get(key),
+        Some(env) => env.upgrade().expect("env is already exposed").borrow().get(key),
         None => None,
       } 
     }
@@ -49,7 +49,7 @@ impl Environment {
         None => None,
       },
       None => match &self.outer {
-        Some(env) => env.borrow().get_builtin(key),
+        Some(env) => env.upgrade().expect("env is already exposed").borrow().get_builtin(key),
         None => None,
       } 
     }

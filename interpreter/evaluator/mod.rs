@@ -331,7 +331,7 @@ fn apply_func(obj: object::Object, args: Vec<object::Object>) -> object::Object 
     _ => return new_error(format!("not a function: {}.", obj)),
   };
 
-  let env = Environment::new_enclosed_env(Rc::clone(&func.env));
+  let env = Environment::new_enclosed_env(Rc::downgrade(&func.env));
   for (i, arg) in args.into_iter().enumerate() {
     (&env).borrow_mut().set(&func.args[i].value, arg);
   }

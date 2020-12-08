@@ -45,13 +45,18 @@ impl Component for Editor {
     type Message = Msg;
     type Properties = ();
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-      let default_value = "let count = fn(x) {
-  if(x > 10) {
-    return x;
-  }
-  count(x + 1);
-};
-count(0);
+      let default_value = "let map = fn(arr, f) {
+  let iter = fn(arr, acc) {
+    if(len(arr) == 0) {
+      acc
+    } else {
+      iter(rest(arr), push(acc, f(first(arr))));
+    }
+  };
+  iter(arr, []);
+}
+
+map([1, 2, 3], fn(v) { v + 1 });
 ";
         let state = State {
           lines: count_lines(default_value),

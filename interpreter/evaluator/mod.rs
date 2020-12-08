@@ -631,16 +631,62 @@ f(3)
   }
 
   #[test]
-  fn test_buildin_functions() {
-      let tests: Vec<(&str, i64)> = vec![
-        ("len(\"\")", 0),
-        ("len(\"four\")", 4),
-        ("len(\"hello world\")", 11),
-        ("let f = fn() { len(\"abc\") }; f()", 3),
+  fn test_builtin_functions() {
+      enum TestObject {
+        Int(i64),
+        Arr(Vec<TestObject>),
+      };
+
+      impl TestObject {
+        fn test(actual: object::Object, expected: Option<TestObject>) {
+          let expected = match expected {
+            Some(exp) => exp,
+            None => return test_null_object(actual),
+          };
+          match expected {
+            TestObject::Int(v) => test_integer_object(actual, v),
+            TestObject::Arr(v) => {
+              for (i, v) in v.into_iter().enumerate() {
+                let actual = match &actual {
+                  object::Object::Array(arr) => arr,
+                  _ => panic!("Object should has Array, but got {}", actual),
+                };
+                TestObject::test(actual.elements[i].clone(), Some(v));
+              }
+            },
+          }
+        }
+      }
+
+      let tests: Vec<(&str, Option<TestObject>)> = vec![
+        ("len(\"\")", Some(TestObject::Int(0))),
+        ("len(\"four\")", Some(TestObject::Int(4))),
+        ("len(\"hello world\")", Some(TestObject::Int(11))),
+        ("let f = fn() { len(\"abc\") }; f()", Some(TestObject::Int(3))),
+        ("len([])", Some(TestObject::Int(0))),
+        ("len([1, 2, 3])", Some(TestObject::Int(3))),
+        ("first([1, 2, 3])", Some(TestObject::Int(1))),
+        ("first([])", None),
+        ("last([1, 2, 3])", Some(TestObject::Int(3))),
+        ("last([])", None),
+        ("rest([1, 2, 3])", Some(TestObject::Arr(
+          vec![TestObject::Int(2), TestObject::Int(3)]
+        ))),
+        ("rest([2, 3])", Some(TestObject::Arr(
+          vec![TestObject::Int(3)]
+        ))),
+        ("rest([])", None),
+        ("push([1, 2, 3], 4)", Some(TestObject::Arr(
+          vec![TestObject::Int(1), TestObject::Int(2), TestObject::Int(3), TestObject::Int(4)]
+        ))),
+        ("push([], 1)", Some(TestObject::Arr(
+          vec![TestObject::Int(1)]
+        ))),
       ];
 
       for (input, expected) in tests.into_iter() {
-        test_integer_object(test_eval(input), expected);
+        let evaluated = test_eval(input);
+        TestObject::test(evaluated, expected);
       }
   }
 
@@ -657,6 +703,14 @@ f(3)
         ("\"hello\" - \"world\"", "unknown operator: \"hello\" - \"world\"."),
         ("len(\"one\", \"two\")", "wrong number of argument: got=2, want=1."),
         ("len(1)", "argument to `len` not supported: got=1"),
+        ("first([], [])", "wrong number of argument: got=2, want=1."),
+        ("first(1)", "argument to `first` must be ARRAY: got=1"),
+        ("last([], [])", "wrong number of argument: got=2, want=1."),
+        ("last(1)", "argument to `last` must be ARRAY: got=1"),
+        ("rest([], [])", "wrong number of argument: got=2, want=1."),
+        ("rest(1)", "argument to `rest` must be ARRAY: got=1"),
+        ("push([], 3, 3)", "wrong number of argument: got=3, want=2."),
+        ("push(1, 1)", "argument to `push` must be ARRAY: got=1"),
         ("let len = 0", "`len` is already used as a builtin function."),
         ("
 if(10 > 1) {

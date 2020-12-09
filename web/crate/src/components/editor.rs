@@ -4,20 +4,41 @@ use yew::prelude::*;
 use yew::web_sys::HtmlTextAreaElement;
 use interpreter::{lexer, parser, evaluator};
 use evaluator::environment::Environment;
-use evaluator::builtins;
+use evaluator::{builtins, object};
 
 use super::header::Header;
 
-fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> Vec<String> {
+fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> Rc<RefCell<Vec<String>>> {
     let l = lexer::Lexer::new(buf);
     let mut p = parser::Parser::new(l);
     let program = p.parse_program();
 
     if p.errors.len() > 0 {
-      return p.errors;
+      return Rc::new(RefCell::new(p.errors));
     }
 
-    vec![format!("{}", evaluator::eval(program, env))]
+    let outputs = Rc::new(RefCell::new(vec![]));
+    
+    let f = Rc::new(
+      RefCell::new({
+        let outputs = Rc::clone(&outputs);
+        move |args| {
+          for v in args {
+            let mut outputs = outputs.borrow_mut();
+            outputs.push(format!("{}", v));
+          }
+          return object::Object::Null;
+        }
+      })
+    );
+
+    env.borrow_mut().set("puts", object::Object::External(object::External::new(f)));
+
+    let evaluated = evaluator::eval(program, env);
+
+    outputs.borrow_mut().push(format!("{}", evaluated));
+    
+    outputs
 }
 
 fn count_lines(s: &str) -> usize {
@@ -26,7 +47,7 @@ fn count_lines(s: &str) -> usize {
 
 struct State {
   lines: usize,
-  result: Vec<String>,
+  result: Rc<RefCell<Vec<String>>>,
 }
 
 pub struct Editor {
@@ -60,7 +81,7 @@ map([1, 2, 3], fn(v) { v + 1 });
 ";
         let state = State {
           lines: count_lines(default_value),
-          result: vec![],
+          result: Rc::new(RefCell::new(vec![])),
         };
         Self {
             link,
@@ -117,7 +138,7 @@ map([1, 2, 3], fn(v) { v + 1 });
                 <div class="editor__result-block">
                   <span class="editor__result-block-title">{ "Result:" }</span>
                   <div>
-                    { for self.state.result.iter().map(|val| html! { <><span>{ &val }</span><br/></> }) }
+                    { for self.state.result.borrow().iter().map(|val| html! { <><span>{ &val }</span><br/></> }) }
                   </div>
                 </div>
             </>

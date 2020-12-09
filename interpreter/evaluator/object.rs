@@ -20,6 +20,7 @@ pub enum Object {
   Return(Return),
   Func(Func),
   Builtin(Builtin),
+  External(External),
   Error(Error),
   Null,
 }
@@ -79,6 +80,7 @@ impl fmt::Display for Object {
       Object::Return(val) => write!(f, "{}", val),
       Object::Func(val) => write!(f, "{}", val),
       Object::Builtin(val) => write!(f, "{:?}", val),
+      Object::External(val) => write!(f, "{:?}", val),
       Object::Error(val) => write!(f, "{}", val),
       Object::Null => write!(f, "null"),
     }
@@ -223,6 +225,31 @@ pub struct Builtin {
 impl Builtin {
   pub fn new(func: BuiltinFunc) -> Builtin {
     Builtin { func }
+  }
+}
+
+pub type ExternalFunc = Rc<RefCell<dyn FnMut(Vec<Object>) -> Object>>;
+
+#[derive(Clone)]
+pub struct External {
+  pub func: ExternalFunc,
+}
+
+impl External {
+  pub fn new(func: ExternalFunc) -> External {
+    External { func }
+  }
+}
+
+impl fmt::Debug for External {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      write!(f, "[External Function]")
+  }
+}
+
+impl PartialEq for External {
+  fn eq(&self, _: &Self) -> bool {
+      panic!("External struct can not be compered.")
   }
 }
 

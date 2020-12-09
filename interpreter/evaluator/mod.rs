@@ -9,7 +9,7 @@ use crate::ast::ident::{Identifier};
 use crate::ast::lit::{self, Literal};
 use crate::ast::operator::{Prefix, Infix};
 
-mod object;
+pub mod object;
 pub mod environment;
 pub mod builtins;
 
@@ -338,7 +338,7 @@ fn is_error(obj: &object::Object) -> bool {
 }
 
 fn eval_call_expression(call: &CallExpression, env: &Rc<RefCell<Environment>>) -> object::Object {
-  let func = eval_expression(&call.func, env);
+  let mut func = eval_expression(&call.func, env);
   if is_error(&func) {
     return func;
   }
@@ -348,7 +348,7 @@ fn eval_call_expression(call: &CallExpression, env: &Rc<RefCell<Environment>>) -
     return args.pop().unwrap();
   }
 
-  return apply_func(func, args);
+  return apply_func(&mut func, args);
 }
 
 fn eval_expressions(args: &Vec<Expression>, env: &Rc<RefCell<Environment>>) -> Vec<object::Object> {
@@ -363,10 +363,11 @@ fn eval_expressions(args: &Vec<Expression>, env: &Rc<RefCell<Environment>>) -> V
   result
 }
 
-fn apply_func(obj: object::Object, args: Vec<object::Object>) -> object::Object {
+fn apply_func(obj: &mut object::Object, args: Vec<object::Object>) -> object::Object {
   let func = match obj {
     object::Object::Func(func) => func,
     object::Object::Builtin(builtin) => return (builtin.func)(args),
+    object::Object::External(external) => return (external.func.borrow_mut())(args),
     _ => return new_error(format!("not a function: {}.", obj)),
   };
 
@@ -811,6 +812,32 @@ f(3)
 ";
 
       test_integer_object(test_eval(input), 5);
+  }
+
+  #[test]
+  fn test_eval_external() {
+      let input = "external()";
+
+      let l = Lexer::new(input.into());
+      let mut p = Parser::new(l);
+      let program = p.parse_program();
+      if !p.check_parse_errors() {
+        panic!();
+      }
+
+      let env = Environment::new(builtins::new_builtins());
+      env.borrow_mut().set("external", object::Object::External(
+        object::External::new(
+          Rc::new(
+            RefCell::new(
+              |_| object::Object::Integer(object::Integer::new(100)))
+            ),
+          ),
+        ),
+      );
+      let mut env = Rc::new(env);
+
+      test_integer_object(eval(program, &mut env), 100);
   }
 
   #[test]

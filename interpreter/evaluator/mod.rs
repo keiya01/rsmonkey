@@ -867,6 +867,7 @@ f(3)
         ("push([], 1)", Some(TestObject::Arr(
           vec![TestObject::Int(1)]
         ))),
+        ("puts(1, 2, 3)", None),
       ];
 
       for (input, expected) in tests.into_iter() {

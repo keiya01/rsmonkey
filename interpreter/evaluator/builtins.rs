@@ -11,6 +11,7 @@ pub fn new_builtins() -> HashMap<String, Object> {
   hash.insert("push".into(), Object::Builtin(Builtin::new(push)));
   hash.insert("insert".into(), Object::Builtin(Builtin::new(insert)));
   hash.insert("remove".into(), Object::Builtin(Builtin::new(remove)));
+  hash.insert("puts".into(), Object::Builtin(Builtin::new(puts)));
   hash
 }
 
@@ -145,6 +146,13 @@ fn remove(args: Vec<Object>) -> Object {
     },
     _ => new_error(format!("argument to `remove` must be HASH: got={}", obj)),
   }
+}
+
+fn puts(args: Vec<Object>) -> Object {
+  for v in args {
+    println!("{}", v);
+  }
+  return Object::Null;
 }
 
 fn new_error(msg: String) -> Object {

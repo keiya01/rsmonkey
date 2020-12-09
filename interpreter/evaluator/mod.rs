@@ -619,6 +619,73 @@ let two = \"two\";
   }
 
   #[test]
+  fn test_eval_hash_builtin() {
+      let tests: Vec<(&str, fn() -> HashMap<object::Object, i64>)> = vec![
+        ("insert({}, 1, 2)", || {
+          let mut expected: HashMap<object::Object, i64> = HashMap::new();
+          expected.insert(
+            object::Object::Integer(object::Integer::new(1)),
+            2,
+          );
+          expected
+        }),
+        ("insert({\"foo\": 1}, \"foo\", 2)", || {
+          let mut expected: HashMap<object::Object, i64> = HashMap::new();
+          expected.insert(
+            object::Object::Str(object::Str::new("foo".into())),
+            2,
+          );
+          expected
+        }),
+        ("let foo = {\"foo\": 1}; insert(foo, \"foo\", 2); foo", || {
+          let mut expected: HashMap<object::Object, i64> = HashMap::new();
+          expected.insert(
+            object::Object::Str(object::Str::new("foo".into())),
+            1,
+          );
+          expected
+        }),
+        ("remove({1: 2, 2: 3}, 1)", || {
+          let mut expected: HashMap<object::Object, i64> = HashMap::new();
+          expected.insert(
+            object::Object::Integer(object::Integer::new(2)),
+            3,
+          );
+          expected
+        }),
+        ("remove({}, \"foo\")", || {
+          HashMap::new()
+        }),
+        ("let foo = {1: 2}; remove(foo, 1); foo", || {
+          let mut expected: HashMap<object::Object, i64> = HashMap::new();
+          expected.insert(
+            object::Object::Integer(object::Integer::new(1)),
+            2,
+          );
+          expected
+        }),
+      ];
+
+      for (input, expected) in tests {
+        let evaluated = test_eval(input);
+        let hash_lit = match evaluated {
+          object::Object::Hash(hash) => hash,
+          _ => panic!("Object should has Array, but got {}", evaluated),
+        };
+        
+        let expected = expected();
+
+        if hash_lit.pairs.len() != expected.len() {
+          panic!("array should has {} items, but got {} items", expected.len(), hash_lit.pairs.len());
+        }
+  
+        for (key, val) in &expected {
+          test_integer_object(hash_lit.pairs.get(key).unwrap().clone(), *val);
+        }
+      }
+  }
+
+  #[test]
   fn test_eval_bang_operator() {
       let tests: Vec<(&str, bool)> = vec![
         ("!true", false),
@@ -781,6 +848,8 @@ f(3)
         ("let f = fn() { len(\"abc\") }; f()", Some(TestObject::Int(3))),
         ("len([])", Some(TestObject::Int(0))),
         ("len([1, 2, 3])", Some(TestObject::Int(3))),
+        ("len({})", Some(TestObject::Int(0))),
+        ("len({1: 1, 2: 2, 3: 3})", Some(TestObject::Int(3))),
         ("first([1, 2, 3])", Some(TestObject::Int(1))),
         ("first([])", None),
         ("last([1, 2, 3])", Some(TestObject::Int(3))),

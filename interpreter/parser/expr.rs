@@ -46,6 +46,7 @@ impl Parser {
       token::Token::BANG | token::Token::MINUS => self.parse_prefix_expression(),
       token::Token::LPAREN => self.parse_grouped_expression(),
       token::Token::LBRACKET => self.parse_array_literal(),
+      token::Token::LBRACE => self.parse_hash_literal(),
       token::Token::IF => self.parse_if_expression(),
       token::Token::FUNCTION => self.parse_func_literal(),
       _ => {
@@ -115,6 +116,48 @@ impl Parser {
     } else {
       None
     }
+  }
+
+  fn parse_hash_literal(&mut self) -> Option<Expression> {
+    let mut pairs = vec![];
+
+    while !self.peek_token.is(token::Token::RBRACE) {
+      self.next_token();
+
+      let key = match self.parse_expression(BinaryOperator::Lowest) {
+        Some(val) => val,
+        None => return None,
+      };
+
+      if !self.expect_peek(token::Token::COLON) {
+        return None;
+      }
+
+      self.next_token();
+
+      let value = match self.parse_expression(BinaryOperator::Lowest) {
+        Some(val) => val,
+        None => return None,
+      };
+
+      if !self.peek_token.is(token::Token::RBRACE) && !self.expect_peek(token::Token::COMMA) {
+        return None;
+      }
+
+      pairs.push((key, value));
+    }
+
+    if !self.expect_peek(token::Token::RBRACE) {
+      return None;
+    }
+
+    Some(
+      Expression::Literal(
+        Literal::Hash(
+          Hash::new(pairs),
+        ),
+      ),
+    )
   }
 
   fn parse_prefix_expression(&mut self) -> Option<Expression> {
@@ -403,7 +446,24 @@ pub fn test_integer_literal(expr: &Expression, comp: &i64) {
   };
 
   if &int.value != comp {
-    panic!("Identifier should has {}, but got {}", comp, int.value);
+    panic!("Expression should has {}, but got {}", comp, int.value);
+  }
+}
+
+#[cfg(test)]
+pub fn test_string_literal(expr: &Expression, comp: &str) {
+  let lit = match &expr {
+    Expression::Literal(lit) => lit,
+    _ => panic!("Expression should has Literal, got {}", &expr)
+  };
+  
+  let s = match &lit {
+    Literal::Str(val) => val,
+    _ => panic!("Literal should has Integer, got {}", &lit)
+  };
+
+  if &s.value != comp {
+    panic!("Expression should has {}, but got {}", comp, s.value);
   }
 }
 
@@ -607,6 +667,237 @@ false;
       Infix::Plus,
       ExpressionLiteral::Int(1),
     );
+  }
+
+  #[test]
+  fn test_parse_hash_string_keys() {
+    let input = "{\"one\": 1, \"two\": 2, \"three\": 3}";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let hash_lit = match &expr.value {
+      Expression::Literal(Literal::Hash(hash)) => hash,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if hash_lit.pairs.len() != 3 {
+      panic!("Hash literal should has 3 pairs, but got {}", hash_lit.pairs.len());
+    }
+
+    let expected: Vec<(String, i64)> = vec![
+      ("one".into(), 1),
+      ("two".into(), 2),
+      ("three".into(), 3),
+    ];
+
+    for (key, val) in &hash_lit.pairs {
+      let key = match &key {
+        Expression::Literal(Literal::Str(val)) => val,
+        _ => panic!("key should be String, but got {}", key),
+      };
+      test_integer_literal(val, &expected.iter().find(|(k, _)| k == &key.value).unwrap().1);
+    }
+  }
+
+  #[test]
+  fn test_parse_hash_int_keys() {
+    let input = "{1: \"one\", 2: \"two\", 3: \"three\"}";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let hash_lit = match &expr.value {
+      Expression::Literal(Literal::Hash(hash)) => hash,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if hash_lit.pairs.len() != 3 {
+      panic!("Hash literal should has 3 pairs, but got {}", hash_lit.pairs.len());
+    }
+
+    let expected: Vec<(i64, String)> = vec![
+      (1, "one".into()),
+      (2, "two".into()),
+      (3, "three".into()),
+    ];
+
+    for (key, val) in &hash_lit.pairs {
+      let key = match &key {
+        Expression::Literal(Literal::Integer(val)) => val,
+        _ => panic!("key should be Integer, but got {}", key),
+      };
+      test_string_literal(val, &expected.iter().find(|(k, _)| k == &key.value).unwrap().1);
+    }
+  }
+
+  #[test]
+  fn test_parse_hash_bool_keys() {
+    let input = "{true: \"one\", false: \"two\"}";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let hash_lit = match &expr.value {
+      Expression::Literal(Literal::Hash(hash)) => hash,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if hash_lit.pairs.len() != 2 {
+      panic!("Hash literal should has 2 pairs, but got {}", hash_lit.pairs.len());
+    }
+
+    let expected: Vec<(bool, String)> = vec![
+      (true, "one".into()),
+      (false, "two".into()),
+    ];
+
+    for (key, val) in &hash_lit.pairs {
+      let key = match &key {
+        Expression::Literal(Literal::Boolean(val)) => val,
+        _ => panic!("key should be Boolean, but got {}", key),
+      };
+      test_string_literal(val, &expected.iter().find(|(k, _)| k == &key.value).unwrap().1);
+    }
+  }
+
+  #[test]
+  fn test_parse_hash_infix_values() {
+    let input = "{\"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let hash_lit = match &expr.value {
+      Expression::Literal(Literal::Hash(hash)) => hash,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if hash_lit.pairs.len() != 3 {
+      panic!("Hash literal should has 3 pairs, but got {}", hash_lit.pairs.len());
+    }
+
+    let expected: Vec<(String, fn(expr: &Expression))> = vec![
+      ("one".into(), |expr| {
+        test_infix_expression(
+          expr,
+          ExpressionLiteral::Int(0),
+          Infix::Plus,
+          ExpressionLiteral::Int(1),
+        );
+      }),
+      ("two".into(), |expr| {
+        test_infix_expression(
+          expr,
+          ExpressionLiteral::Int(10),
+          Infix::Minus,
+          ExpressionLiteral::Int(8),
+        );
+      }),
+      ("three".into(), |expr| {
+        test_infix_expression(
+          expr,
+          ExpressionLiteral::Int(15),
+          Infix::Slash,
+          ExpressionLiteral::Int(5),
+        );
+      }),
+    ];
+
+    for (key, val) in &hash_lit.pairs {
+      let key = match &key {
+        Expression::Literal(Literal::Str(val)) => val,
+        _ => panic!("key should be Str, but got {}", key),
+      };
+      (expected.iter().find(|(k, _)| k == &key.value).unwrap().1)(val);
+    }
+  }
+
+  #[test]
+  fn test_parse_empty_hash() {
+    let input = "{}";
+
+    let l = lexer::Lexer::new(input.to_string());
+    let mut p = Parser::new(l);
+
+    let program = p.parse_program();
+    if !p.check_parse_errors() {
+      panic!();
+    }
+
+    if program.statements.len() != 1 {
+      panic!("program.statements should has only 1 statement, but got {}", program.statements.len());
+    }
+
+    let expr = match &program.statements[0] {
+      Statement::Expr(expr) => expr,
+      _ => panic!("program.statements should has ExpressionStatement, but got {:?}", program.statements[0]),
+    };
+    
+    let hash_lit = match &expr.value {
+      Expression::Literal(Literal::Hash(hash)) => hash,
+      _ => panic!("Expression should has Str literal, but got {:?}", expr.value),
+    };
+
+    if hash_lit.pairs.len() != 0 {
+      panic!("Hash literal should has 3 pairs, but got {}", hash_lit.pairs.len());
+    }
   }
   
   #[test]

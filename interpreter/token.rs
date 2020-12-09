@@ -26,6 +26,7 @@ pub enum Token {
   
   // デリミタ
   COMMA,
+  COLON,
   SEMICOLON,
   
   LPAREN,
@@ -71,6 +72,7 @@ impl fmt::Display for Token {
       
       // デリミタ
       Token::COMMA => write!(f, "COMMA"),
+      Token::COLON => write!(f, "COLON"),
       Token::SEMICOLON => write!(f, "SEMICOLON"),
       
       Token::LPAREN => write!(f, "LPAREN"),

@@ -64,6 +64,7 @@ impl Lexer {
           token::Token::BANG
         }
       },
+      b':' => token::Token::COLON,
       b';' => token::Token::SEMICOLON,
       b'(' => token::Token::LPAREN,
       b')' => token::Token::RPAREN,
@@ -163,6 +164,7 @@ if (5 < 10) {
 \"foobar\"
 \"foo bar\"
 [1, 2];
+{\"foo\": \"bar\"}
 ";
 
       let tests: Vec<token::Token> = vec![
@@ -247,6 +249,11 @@ if (5 < 10) {
         token::Token::INT(2),
         token::Token::RBRACKET,
         token::Token::SEMICOLON,
+        token::Token::LBRACE,
+        token::Token::STRING("foo".to_string()),
+        token::Token::COLON,
+        token::Token::STRING("bar".to_string()),
+        token::Token::RBRACE,
         token::Token::EOF,
       ];
 

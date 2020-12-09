@@ -11,7 +11,7 @@ pub enum Literal {
   Boolean(Boolean),
   Str(Str),
   Array(Array),
-  // Hash(Hash),
+  Hash(Hash),
   Func(Func),
 }
 
@@ -22,6 +22,7 @@ impl fmt::Display for Literal {
       Literal::Boolean(v) => write!(f, "{}", v),
       Literal::Str(v) => write!(f, "{}", v),
       Literal::Array(v) => write!(f, "{}", v),
+      Literal::Hash(v) => write!(f, "{}", v),
       Literal::Func(func) => write!(f, "{}", func),
     }
   }
@@ -94,6 +95,29 @@ impl fmt::Display for Array {
     write!(f, "[")?;
     utils::write_object_list(&self.elements, f)?;
     write!(f, "]")
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct Hash {
+  pub pairs: Vec<(Expression, Expression)>,
+}
+
+impl Hash {
+  pub fn new(pairs: Vec<(Expression, Expression)>) -> Hash {
+    Hash { pairs }
+  }
+}
+
+impl fmt::Display for Hash {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{{")?;
+    let mut pairs = vec![];
+    for (key, val) in &self.pairs {
+      pairs.push(format!("{}: {}", key, val));
+    }
+    utils::write_object_list(&pairs, f)?;
+    write!(f, "}}")
   }
 }
 

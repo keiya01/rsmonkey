@@ -1,11 +1,12 @@
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use crate::ast::Program;
 use crate::ast::stmt::{Statement, BlockStatement};
 use crate::ast::expr::{Expression, IfExpression, CallExpression};
 use crate::ast::ident::{Identifier};
-use crate::ast::lit::{Literal};
+use crate::ast::lit::{self, Literal};
 use crate::ast::operator::{Prefix, Infix};
 
 mod object;
@@ -94,10 +95,34 @@ fn eval_literal(lit: &Literal, env: &Rc<RefCell<Environment>>) -> object::Object
         object::Array::new(elms),
       )
     },
+    Literal::Hash(val) => eval_hash_literal(val, env),
     Literal::Func(func) => object::Object::Func(
       object::Func::new(func.args.clone(), func.body.clone(), Rc::clone(env))
     ),
   }
+}
+
+fn eval_hash_literal(hash: &lit::Hash, env: &Rc<RefCell<Environment>>) -> object::Object {
+  let mut pairs: HashMap<object::Object, object::Object> = HashMap::new();
+  for (key, val) in &hash.pairs {
+    let key = eval_expression(key, env);
+    if is_error(&key) {
+      return key;
+    }
+
+    if !key.is_primitive() {
+      return new_error(format!("unusable as hash key: {}", key));
+    }
+
+    let val = eval_expression(val, env);
+    if is_error(&val) {
+      return val;
+    }
+
+    pairs.insert(key, val);
+  }
+
+  object::Object::Hash(object::Hash::new(pairs))
 }
 
 fn eval_prefix_expression(operator: &Prefix, right: object::Object) -> object::Object {
@@ -152,23 +177,37 @@ fn eval_infix_expression(left: object::Object, operator: &Infix, right: object::
 }
 
 fn eval_index_expression(left: object::Object, index: object::Object) -> object::Object {
-  let index = match index {
-    object::Object::Integer(i) => i,
-    _ => return new_error(format!("specified index type is not supported: {}", index)),
-  };
   match left {
     object::Object::Array(arr) => eval_array_index_expression(arr, index),
+    object::Object::Hash(hash) => eval_hash_index_expression(hash, index),
     _ => new_error(format!("index operator not supported: {}", left)),
   }
 }
 
 #[allow(unused_comparisons)]
-fn eval_array_index_expression(arr: object::Array, idx: object::Integer) -> object::Object {
+fn eval_array_index_expression(arr: object::Array, idx: object::Object) -> object::Object {
+  let idx = match idx {
+    object::Object::Integer(i) => i,
+    _ => return new_error(format!("specified index type is not supported: {}", idx)),
+  };
+
   let idx = idx.value as usize;
-  if idx < 0 || idx > arr.elements.len() - 1 {
+  let len = arr.elements.len();
+  if idx < 0 || len == 0 || idx > len - 1 {
     return NULL;
   }
   arr.elements[idx].clone()
+}
+
+fn eval_hash_index_expression(hash: object::Hash, idx: object::Object) -> object::Object {
+  if !idx.is_primitive() {
+    return new_error(format!("unusable as hash key: {}", idx));
+  }
+
+  match hash.pairs.get(&idx) {
+    Some(val) => val.clone(),
+    None => NULL,
+  }
 }
 
 fn eval_integer_infix_expression(left: object::Object, operator: &Infix, right: object::Object) -> object::Object {
@@ -491,6 +530,83 @@ mod tests {
         ("let arr = [1, 2, 3]; let i = arr[0]; arr[i];", Some(2)),
         ("[1, 2, 3][3]", None),
         ("[1, 2, 3][-1]", None),
+        ("[][0]", None),
+      ];
+
+      for (input, expected) in tests.into_iter() {
+        let evaluated = test_eval(input);
+        match expected {
+          Some(val) => test_integer_object(evaluated, val),
+          None => test_null_object(evaluated),
+        };
+      }
+  }
+
+  #[test]
+  fn test_eval_hash_expression() {
+      let input = "
+let two = \"two\";
+{
+  \"one\": 10 - 9,
+  two: 1 + 1,
+  \"thr\" + \"ee\": 6 / 2,
+  4: 4,
+  true: 5,
+  false: 6,
+}
+";
+
+      let mut expected: HashMap<object::Object, i64> = HashMap::new();
+      expected.insert(
+        object::Object::Str(object::Str::new("one".into())),
+        1,
+      );
+      expected.insert(
+        object::Object::Str(object::Str::new("two".into())),
+        2,
+      );
+      expected.insert(
+        object::Object::Str(object::Str::new("three".into())),
+        3,
+      );
+      expected.insert(
+        object::Object::Integer(object::Integer::new(4)),
+        4,
+      );
+      expected.insert(
+        object::Object::Boolean(object::Boolean { value: true }),
+        5,
+      );
+      expected.insert(
+        object::Object::Boolean(object::Boolean { value: false }),
+        6,
+      );
+
+      let evaluated = test_eval(input);
+      let hash_lit = match evaluated {
+        object::Object::Hash(hash) => hash,
+        _ => panic!("Object should has Array, but got {}", evaluated),
+      };
+
+      if hash_lit.pairs.len() != expected.len() {
+        panic!("array should has {} items, but got {} items", expected.len(), hash_lit.pairs.len());
+      }
+
+      for (key, val) in &expected {
+        test_integer_object(hash_lit.pairs.get(key).unwrap().clone(), *val);
+      }
+  }
+
+  #[test]
+  fn test_eval_hash_index_expression() {
+      let tests: Vec<(&str, Option<i64>)> = vec![
+        ("{\"foo\": 5}[\"foo\"]", Some(5)),
+        ("{\"foo\": 5}[\"bar\"]", None),
+        ("let k = \"foo\"; {\"foo\": 5}[k]", Some(5)),
+        ("{}[\"foo\"]", None),
+        ("{5: 5}[5]", Some(5)),
+        ("{true: 5}[true]", Some(5)),
+        ("{false: 5}[false]", Some(5)),
       ];
 
       for (input, expected) in tests.into_iter() {
@@ -712,6 +828,7 @@ f(3)
         ("push([], 3, 3)", "wrong number of argument: got=3, want=2."),
         ("push(1, 1)", "argument to `push` must be ARRAY: got=1"),
         ("let len = 0", "`len` is already used as a builtin function."),
+        ("{\"name\": \"Monkey\"}[fn(x) { x }]", "unusable as hash key: fn(x) { x }"),
         ("
 if(10 > 1) {
   if(10 > 1) {

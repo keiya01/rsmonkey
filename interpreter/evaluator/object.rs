@@ -1,7 +1,9 @@
 use std::fmt;
 use std::cmp::PartialEq;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::hash::{self, Hasher};
 
 use crate::ast::ident::Identifier;
 use crate::ast::stmt::BlockStatement;
@@ -14,11 +16,56 @@ pub enum Object {
   Boolean(Boolean),
   Str(Str),
   Array(Array),
+  Hash(Hash),
   Return(Return),
   Func(Func),
   Builtin(Builtin),
   Error(Error),
   Null,
+}
+
+impl Object {
+  pub fn is_primitive(&self) -> bool {
+    match self {
+      Object::Boolean(_)
+      | Object::Str(_)
+      | Object::Integer(_) => true,
+      _ => false,
+    }
+  }
+}
+
+impl PartialEq for Object {
+  fn eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (
+        Object::Boolean(val),
+        Object::Boolean(other),
+      ) => val.value == other.value,
+      (
+        Object::Str(val),
+        Object::Str(other),
+      ) => val.value == other.value,
+      (
+        Object::Integer(val),
+        Object::Integer(other),
+      ) => val.value == other.value,
+      _ => panic!("PartialEq is not implemented for {}", self),
+    }
+  }
+}
+
+impl Eq for Object {}
+
+impl hash::Hash for Object {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    match self {
+      Object::Boolean(val) => val.value.hash(state),
+      Object::Str(val) => val.value.hash(state),
+      Object::Integer(val) => val.value.hash(state),
+      _ => panic!("Hash is not implemented for {}", self),
+    }
+  }
 }
 
 impl fmt::Display for Object {
@@ -28,6 +75,7 @@ impl fmt::Display for Object {
       Object::Boolean(val) => write!(f, "{}", val),
       Object::Str(val) => write!(f, "{}", val),
       Object::Array(val) => write!(f, "{}", val),
+      Object::Hash(val) => write!(f, "{}", val),
       Object::Return(val) => write!(f, "{}", val),
       Object::Func(val) => write!(f, "{}", val),
       Object::Builtin(val) => write!(f, "{:?}", val),
@@ -115,6 +163,29 @@ impl fmt::Display for Array {
     write!(f, "[")?;
     utils::write_object_list(&self.elements, f)?;
     write!(f, "]")
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct Hash {
+  pub pairs: HashMap<Object, Object>,
+}
+
+impl Hash {
+  pub fn new(pairs: HashMap<Object, Object>) -> Hash {
+    Hash { pairs }
+  }
+}
+
+impl fmt::Display for Hash {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{{")?;
+    let mut pairs = vec![];
+    for (key, val) in &self.pairs {
+      pairs.push(format!("{}: {}", key, val));
+    }
+    utils::write_object_list(&pairs, f)?;
+    write!(f, "}}")
   }
 }
 

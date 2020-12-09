@@ -5,12 +5,13 @@ use super::ident::Identifier;
 use super::stmt::BlockStatement;
 use super::expr::Expression;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Literal {
   Integer(Integer),
   Boolean(Boolean),
   Str(Str),
   Array(Array),
+  // Hash(Hash),
   Func(Func),
 }
 
@@ -26,7 +27,7 @@ impl fmt::Display for Literal {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Integer {
   pub value: i64,
 }
@@ -43,7 +44,7 @@ impl fmt::Display for Integer {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Boolean {
   pub value: bool,
 }
@@ -60,7 +61,7 @@ impl fmt::Display for Boolean {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Str {
   pub value: String,
 }
@@ -77,7 +78,7 @@ impl fmt::Display for Str {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Array {
   pub elements: Vec<Expression>,
 }
@@ -96,7 +97,7 @@ impl fmt::Display for Array {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Func {
   pub args: Vec<Identifier>,
   pub body: BlockStatement,

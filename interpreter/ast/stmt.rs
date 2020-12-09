@@ -1,10 +1,9 @@
 use std::fmt;
-use std::cmp::PartialEq;
 
 use super::ident::Identifier;
 use super::expr::Expression;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Statement {
   Let(LetStatement),
   Return(ReturnStatement),
@@ -23,7 +22,7 @@ impl fmt::Display for Statement {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct LetStatement {
   pub ident: Identifier,
   pub value: Expression,
@@ -45,7 +44,7 @@ impl fmt::Display for LetStatement {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct ReturnStatement {
   pub value: Expression,
 }
@@ -64,7 +63,7 @@ impl fmt::Display for ReturnStatement {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct ExpressionStatement {
   pub value: Expression,
 }
@@ -81,7 +80,7 @@ impl fmt::Display for ExpressionStatement {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct BlockStatement {
   pub statements: Vec<Statement>,
 }

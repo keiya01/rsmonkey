@@ -6,7 +6,7 @@ use super::lit::{Literal};
 use super::operator::{Prefix, Infix};
 use super::stmt::{BlockStatement};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Expression {
   Identifier(Identifier),
   Literal(Literal),
@@ -31,7 +31,7 @@ impl fmt::Display for Expression {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct PrefixExpression {
   pub operator: Prefix,
   pub right: Box<Expression>,
@@ -49,7 +49,7 @@ impl fmt::Display for PrefixExpression {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct InfixExpression {
   pub left: Box<Expression>,
   pub operator: Infix,
@@ -68,7 +68,7 @@ impl fmt::Display for InfixExpression {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct IfExpression {
   pub condition: Box<Expression>,
   pub consequence: BlockStatement,
@@ -91,7 +91,7 @@ impl fmt::Display for IfExpression {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct CallExpression {
   pub func: Box<Expression>, // Identifier or Func literal
   pub args: Vec<Expression>,
@@ -113,7 +113,7 @@ impl fmt::Display for CallExpression {
   }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct IndexExpression {
   pub left: Box<Expression>, // Identifier or Func literal
   pub index: Box<Expression>,

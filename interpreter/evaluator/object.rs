@@ -79,7 +79,7 @@ impl fmt::Display for Object {
       Object::Hash(val) => write!(f, "{}", val),
       Object::Return(val) => write!(f, "{}", val),
       Object::Func(val) => write!(f, "{}", val),
-      Object::Builtin(val) => write!(f, "{:?}", val),
+      Object::Builtin(val) => write!(f, "{}", val),
       Object::External(val) => write!(f, "{:?}", val),
       Object::Error(val) => write!(f, "{}", val),
       Object::Null => write!(f, "null"),
@@ -225,6 +225,12 @@ pub struct Builtin {
 impl Builtin {
   pub fn new(func: BuiltinFunc) -> Builtin {
     Builtin { func }
+  }
+}
+
+impl fmt::Display for Builtin {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "[Builtin Function]")
   }
 }
 

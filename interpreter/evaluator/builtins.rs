@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::utils::{format_object_list};
 use super::object::*;
 
 pub fn new_builtins() -> HashMap<String, Object> {
@@ -149,9 +150,7 @@ fn remove(args: Vec<Object>) -> Object {
 }
 
 fn puts(args: Vec<Object>) -> Object {
-  for v in args {
-    println!("{}", v);
-  }
+  println!("{}", format_object_list(&args, " "));
   return Object::Null;
 }
 

@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use yew::prelude::*;
 use yew::web_sys::HtmlTextAreaElement;
-use interpreter::{lexer, parser, evaluator};
+use interpreter::{lexer, parser, evaluator, utils};
 use evaluator::environment::Environment;
 use evaluator::{builtins, object};
 
@@ -22,11 +22,9 @@ fn exec(buf: String, env: &mut Rc<RefCell<Environment>>) -> Rc<RefCell<Vec<Strin
     let f = Rc::new(
       RefCell::new({
         let outputs = Rc::clone(&outputs);
-        move |args| {
-          for v in args {
-            let mut outputs = outputs.borrow_mut();
-            outputs.push(format!("{}", v));
-          }
+        move |args: Vec<object::Object>| {
+          let mut outputs = outputs.borrow_mut();
+          outputs.push(format!("{}", utils::format_object_list(&args, " ")));
           return object::Object::Null;
         }
       })

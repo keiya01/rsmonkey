@@ -76,7 +76,7 @@ impl Lexer {
       b'+' => token::Token::PLUS,
       b'-' => token::Token::MINUS,
       b'*' => token::Token::ASTERISK,
-      b'/' => token::Token::SLASH,
+      b'/' => self.read_slash(),
       b'<' => token::Token::LT,
       b'>' => token::Token::GT,
       b'"' => self.read_string(),
@@ -127,12 +127,39 @@ impl Lexer {
       if let b'"' = self.ch {
         break;
       }
-      if let b'0' = self.ch {
+      if let 0 = self.ch {
         break;
       }
     }
     let str_lit = &self.input[position..self.position];
     token::Token::STRING(str_lit.to_string())
+  }
+
+  fn read_slash(&mut self) -> token::Token {
+    if let b'/' = self.peek_char() {
+      self.read_char();
+      self.read_char();
+    } else {
+      return token::Token::SLASH;
+    }
+
+    // skip whitespace
+    if let b' ' | b'\t' = self.ch {
+      self.read_char();
+    }
+
+    let position = self.position;
+    loop {
+      self.read_char();
+      if let b'\n' = self.ch {
+        break;
+      }
+      if let 0 = self.ch {
+        break;
+      }
+    }
+    let comment = &self.input[position..self.position];
+    token::Token::COMMENT(comment.into())
   }
 }
 
@@ -145,6 +172,7 @@ mod tests {
       let input = "let five = 5;
 let ten = 10;
 
+// function
 let add = fn(x, y) {
   x + y;
 };
@@ -165,7 +193,7 @@ if (5 < 10) {
 \"foo bar\"
 [1, 2];
 {\"foo\": \"bar\"}
-";
+// foo bar";
 
       let tests: Vec<token::Token> = vec![
         token::Token::LET,
@@ -178,6 +206,7 @@ if (5 < 10) {
         token::Token::ASSIGN,
         token::Token::INT(10),
         token::Token::SEMICOLON,
+        token::Token::COMMENT("function".into()),
         token::Token::LET,
         token::Token::IDENT("add".to_string()),
         token::Token::ASSIGN,
@@ -254,6 +283,7 @@ if (5 < 10) {
         token::Token::COLON,
         token::Token::STRING("bar".to_string()),
         token::Token::RBRACE,
+        token::Token::COMMENT("foo bar".into()),
         token::Token::EOF,
       ];
 

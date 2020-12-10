@@ -9,6 +9,7 @@ pub enum Statement {
   Return(ReturnStatement),
   Expr(ExpressionStatement),
   Block(BlockStatement),
+  Comment(CommentStatement),
 }
 
 impl fmt::Display for Statement {
@@ -18,6 +19,7 @@ impl fmt::Display for Statement {
       Statement::Return(return_stmt) => write!(f, "{}", return_stmt),
       Statement::Expr(expr_stmt) => write!(f, "{}", expr_stmt),
       Statement::Block(block) => write!(f, "{}", block),
+      Statement::Comment(comment) => write!(f, "{}", comment),
     }
   }
 }
@@ -97,5 +99,22 @@ impl fmt::Display for BlockStatement {
       write!(f, "{{ {} }}", stmt)?;
     }
     Ok(())
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct CommentStatement {
+  pub value: String,
+}
+
+impl CommentStatement {
+  pub fn new(value: String) -> CommentStatement {
+    CommentStatement { value }
+  }
+}
+
+impl fmt::Display for CommentStatement {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "// {}", self.value)
   }
 }

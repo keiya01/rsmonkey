@@ -6,9 +6,10 @@ use crate::ast::operator::{BinaryOperator};
 
 impl Parser {
   pub(super) fn parse_statement(&mut self) -> Option<Statement> {
-    match self.current_token {
+    match &self.current_token {
       token::Token::LET => self.parse_let_statement(),
       token::Token::RETURN => self.parse_return_statement(),
+      token::Token::COMMENT(s) => self.parse_comment_statement(s.to_string()),
       _ => self.parse_expression_statement(),
     }
   }
@@ -93,6 +94,10 @@ impl Parser {
     }
 
     BlockStatement::new(statements)
+  }
+
+  fn parse_comment_statement(&self, s: String) -> Option<Statement> {
+    Some(Statement::Comment(CommentStatement::new(s)))
   }
 
   fn expect_ident_peek(&mut self) -> bool {
@@ -181,6 +186,34 @@ mod tests {
       };
 
       test_literal_expression(&return_stmt.value, expected_expr);
+    }
+  }
+
+  #[test]
+  fn test_parse_comment_statement() {
+    let tests = vec![
+      ("// foo bar", "foo bar"),
+    ];
+
+    for (input, expected) in tests.into_iter() {
+      let l = lexer::Lexer::new(input.to_string());
+      let mut p = Parser::new(l);
+
+      let program = p.parse_program();
+      if !p.check_parse_errors() {
+        panic!();
+      }
+
+      if program.statements.len() != 1 {
+        panic!("program.statements does not contain 1 statements. got={}", program.statements.len());
+      }
+      
+      let comment_stmt = match &program.statements[0] {
+        Statement::Comment(comment) => comment,
+        _ => panic!("CommentStatement is not included, got {:?}", &program.statements[0]),
+      };
+
+      assert_eq!(&comment_stmt.value, expected);
     }
   }
 }

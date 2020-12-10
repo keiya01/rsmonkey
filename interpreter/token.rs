@@ -44,6 +44,7 @@ pub enum Token {
   IF,
   ELSE,
   RETURN,
+  COMMENT(String),
 }
 
 impl fmt::Display for Token {
@@ -90,6 +91,7 @@ impl fmt::Display for Token {
       Token::IF => write!(f, "IF"),
       Token::ELSE => write!(f, "ELSE"),
       Token::RETURN => write!(f, "RETURN"),
+      Token::COMMENT(s) => write!(f, "COMMENT({})", s),
     }
   }
 }

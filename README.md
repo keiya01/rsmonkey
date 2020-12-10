@@ -12,6 +12,10 @@ or
 cargo run -p repl input.txt
 ```
 
+## Playground
+
+[The rsmonkey Playground](https://rsmonkey.vercel.app/)
+
 ## Writing Code
 
 ```js

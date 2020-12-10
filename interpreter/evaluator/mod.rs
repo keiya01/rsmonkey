@@ -26,6 +26,9 @@ pub fn eval(node: Program, env: &Rc<RefCell<Environment>>) -> object::Object {
 fn eval_program(node: &Program, env: &Rc<RefCell<Environment>>) -> object::Object {
   let mut result: object::Object = NULL;
   for stmt in &node.statements {
+    if let Statement::Comment(_) = stmt {
+      continue;
+    }
     result = eval_statement(stmt, env);
 
     if let object::Object::Return(return_obj) = result {
@@ -276,6 +279,9 @@ fn eval_if_expression(expr: &IfExpression, env: &Rc<RefCell<Environment>>) -> ob
 fn eval_block_statement(block: &BlockStatement, env: &Rc<RefCell<Environment>>) -> object::Object {
   let mut result: object::Object = NULL;
   for stmt in &block.statements {
+    if let Statement::Comment(_) = stmt {
+      continue;
+    }
     result = eval_statement(stmt, env);
 
     match result {
